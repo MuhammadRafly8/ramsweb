@@ -2,24 +2,30 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get('authToken')?.value || localStorage.getItem('authToken');
+  const token = request.cookies.get('authToken')?.value;
   const isAuthPage = request.nextUrl.pathname.startsWith('/auth/');
+  
+  // Improve page refresh detection by checking referer against current URL
+  const referer = request.headers.get('referer');
+  const isPageRefresh = !!referer && new URL(referer).pathname === request.nextUrl.pathname;
 
-  // Jika tidak ada token dan bukan halaman auth, redirect ke login
-  // Tapi jangan redirect jika ini adalah refresh halaman
-  if (!token && !isAuthPage && !request.headers.get('referer')) {
+  // For any page refresh, always allow the user to stay on the current page
+  if (isPageRefresh) {
+    return NextResponse.next();
+  }
+  
+  // Only redirect to login if there's no token and not an auth page
+  if (!token && !isAuthPage) {
     return NextResponse.redirect(new URL('/auth/login', request.url));
   }
 
-  // Jika ada token dan mencoba akses halaman auth, redirect ke home
+  // If there's a token and user is trying to access auth pages, redirect to home
   if (token && isAuthPage) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
   return NextResponse.next();
 }
-
-// Tentukan path mana yang akan diproses oleh middleware
 export const config = {
   matcher: [
     '/((?!api|_next/static|_next/image|favicon.ico|public).*)',

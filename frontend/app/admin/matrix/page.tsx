@@ -7,6 +7,7 @@ import { useAuth } from "../../../components/auth/authContext";
 import AdminRoute from "../../../components/auth/adminRoute";
 import { MatrixItem } from "../../../types/matrix";
 import { matrixService } from "../../../services/api";
+import ShareMatrix from "../../../components/matrix/shareMatrix";
 
 export default function AdminMatrixPage() {
   const [matrices, setMatrices] = useState<MatrixItem[]>([]);
@@ -176,13 +177,14 @@ export default function AdminMatrixPage() {
                           >
                             History
                           </button>
-                          <button
-                            onClick={() => copyShareLink(matrix.id, matrix.keyword)}
+                          {/* Replace the Share button with ShareMatrix component */}
+                          <ShareMatrix
+                            matrixId={matrix.id}
+                            keyword={matrix.keyword}
+                            showKeyword={true}
+                            buttonText="Share"
                             className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
-                            title="Copy share link"
-                          >
-                            Share
-                          </button>
+                          />
                           <button
                             onClick={() => handleDeleteMatrix(matrix.id)}
                             className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"

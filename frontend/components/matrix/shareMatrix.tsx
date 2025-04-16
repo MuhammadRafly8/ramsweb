@@ -7,9 +7,17 @@ interface ShareMatrixProps {
   matrixId: string;
   buttonText?: string;
   className?: string;
+  keyword?: string;
+  showKeyword?: boolean;
 }
 
-const ShareMatrix = ({ matrixId, buttonText = "Bagikan", className = "" }: ShareMatrixProps) => {
+const ShareMatrix = ({ 
+  matrixId, 
+  buttonText = "Bagikan", 
+  className = "",
+  keyword = "",
+  showKeyword = false
+}: ShareMatrixProps) => {
   const [isCopying, setIsCopying] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -74,6 +82,9 @@ const ShareMatrix = ({ matrixId, buttonText = "Bagikan", className = "" }: Share
           onClick={(e) => (e.target as HTMLInputElement).select()}
           className="w-full p-2 mt-2 border border-gray-300 rounded bg-gray-50"
         />
+        {showKeyword && keyword && (
+          <p className="mt-2 text-sm font-medium">Keyword: {keyword}</p>
+        )}
       </div>,
       { autoClose: false, closeOnClick: false }
     );
@@ -104,7 +115,11 @@ const ShareMatrix = ({ matrixId, buttonText = "Bagikan", className = "" }: Share
       }
       
       if (copySuccess) {
-        toast.success("Link berhasil disalin ke clipboard!");
+        if (showKeyword && keyword) {
+          toast.success(`Link berhasil disalin ke clipboard! Keyword: ${keyword}`);
+        } else {
+          toast.success("Link berhasil disalin ke clipboard!");
+        }
       } else {
         // Jika semua metode gagal, tampilkan pesan untuk menyalin manual
         showManualCopyDialog(shareUrl);
