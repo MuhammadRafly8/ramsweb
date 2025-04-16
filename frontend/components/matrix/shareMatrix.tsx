@@ -24,6 +24,8 @@ const ShareMatrix = ({
   // Fungsi untuk memeriksa ketersediaan Clipboard API dengan lebih akurat
   const isClipboardAvailable = () => {
     return typeof navigator !== 'undefined' && 
+           typeof navigator.onLine !== 'undefined' &&
+           navigator.onLine &&
            typeof navigator.clipboard !== 'undefined' && 
            typeof navigator.clipboard.writeText === 'function';
   };

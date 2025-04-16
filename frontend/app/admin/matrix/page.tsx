@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { useAuth } from "../../../components/auth/authContext";
 import AdminRoute from "../../../components/auth/adminRoute";
 import { MatrixItem } from "../../../types/matrix";
 import { matrixService } from "../../../services/api";
@@ -19,7 +18,7 @@ export default function AdminMatrixPage() {
     keyword: ""
   });
   const router = useRouter();
-  const { userId } = useAuth();
+  
 
   useEffect(() => {
     // Load matrices from API instead of localStorage

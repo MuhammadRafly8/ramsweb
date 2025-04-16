@@ -636,5 +636,4 @@ export default function MatrixDetailPage() {
         </div>
       </div>
     </main>
-  );
-};
+  );};
