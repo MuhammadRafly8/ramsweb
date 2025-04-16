@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../components/auth/authContext';
 import HistoryTable from '../../components/history/historyTable';
@@ -9,16 +9,30 @@ export default function HistoryPage() {
   const { isAuthenticated, isAdmin } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    // Redirect if not authenticated or not admin
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-    } else if (!isAdmin()) {
-      router.push('/unauthorized');
-    }
-  }, [isAuthenticated, isAdmin, router]);
+  // Add this at the top of your component
+  const [authChecked, setAuthChecked] = useState(false);
 
-  if (!isAuthenticated || !isAdmin()) {
+  useEffect(() => {
+    // First, check if authentication state has been determined
+    if (!authChecked && isAuthenticated !== undefined) {
+      setAuthChecked(true);
+    }
+    
+    // Only redirect if authentication has been checked and user is not authenticated
+    if (authChecked && isAuthenticated === false) {
+      router.push('/auth/login');
+      return;
+    }
+    
+    // Only check admin status if user is authenticated
+    if (authChecked && isAuthenticated && !isAdmin()) {
+      router.push('/unauthorized');
+      return;
+    }
+  }, [isAuthenticated, isAdmin, router, authChecked]);
+
+  // Update the conditional rendering
+  if (!authChecked || (authChecked && !isAuthenticated) || (authChecked && isAuthenticated && !isAdmin())) {
     return null;
   }
 

@@ -36,21 +36,31 @@ export default function UsersManagementPage() {
     password: '',
     role: 'user'
   });
-  
-  useEffect(() => {
-    // Redirect if not admin
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
+  const [authChecked, setAuthChecked] = useState(false);
     
-    if (!isAdmin()) {
-      router.push('/');
-      return;
-    }
-    
-    fetchUsers();
-  }, [isAuthenticated, isAdmin, router]);
+    useEffect(() => {
+      // First, check if authentication state has been determined
+      if (!authChecked && isAuthenticated !== undefined) {
+        setAuthChecked(true);
+      }
+      
+      // Only redirect if authentication has been checked and user is not authenticated
+      if (authChecked && isAuthenticated === false) {
+        router.push('/auth/login');
+        return;
+      }
+      
+      // Only check admin status if user is authenticated
+      if (authChecked && isAuthenticated && !isAdmin()) {
+        router.push('/');
+        return;
+      }
+      
+      // Only fetch users if authenticated and admin
+      if (authChecked && isAuthenticated && isAdmin()) {
+        fetchUsers();
+      }
+    }, [isAuthenticated, isAdmin, router, authChecked]);
   
   const fetchUsers = async () => {
     try {

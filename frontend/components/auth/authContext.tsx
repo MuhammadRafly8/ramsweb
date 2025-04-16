@@ -5,77 +5,90 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { authService } from '../../services/api';
 
+// Update the interface to allow null for isAuthenticated
 interface AuthContextType {
-  isAuthenticated: boolean;
+  isAuthenticated: boolean | null;
   userRole: string | null;
   userId: string | null;
   login: (username: string, password: string) => Promise<unknown>;
   logout: () => Promise<void>;
   isAdmin: () => boolean;
-  isLoading: boolean; // Add this missing property
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Change the initial state of isAuthenticated to null to represent "unknown" state
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    // Check if user is logged in on initial load
-    const checkAuthStatus = async () => {
-      try {
-        setIsLoading(true);
-        console.log('Checking auth status...');
+  // Function to check authentication status
+  const checkAuthStatus = async () => {
+    try {
+      setIsLoading(true);
+      console.log('Checking auth status...');
+      
+      // Check token in localStorage
+      const token = localStorage.getItem('authToken');
+      
+      if (token) {
+        // Set Authorization header
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
-        // Cek token di localStorage terlebih dahulu
-        const token = localStorage.getItem('authToken');
-        
-        // Jika token ada, set header Authorization
-        if (token) {
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        try {
+          // Verify token with backend
+          const userData = await authService.getCurrentUser();
+          console.log('Auth status response:', userData);
           
-          try {
-            // Verifikasi token dengan backend
-            const userData = await authService.getCurrentUser();
-            console.log('Auth status response:', userData);
-            
-            if (userData) {
-              setIsAuthenticated(true);
-              setUserRole(userData.role);
-              setUserId(userData.id);
-            }
-          } catch (tokenError) {
-            // Token tidak valid atau expired
-            console.error('Token validation failed:', tokenError);
-            localStorage.removeItem('authToken');
-            delete axios.defaults.headers.common['Authorization'];
-            setIsAuthenticated(false);
-            setUserRole(null);
-            setUserId(null);
+          if (userData) {
+            setIsAuthenticated(true);
+            setUserRole(userData.role);
+            setUserId(userData.id);
           }
-        } else {
-          // Tidak ada token
+        } catch (tokenError) {
+          console.error('Token validation failed:', tokenError);
+          // Clear invalid token
+          localStorage.removeItem('authToken');
+          delete axios.defaults.headers.common['Authorization'];
           setIsAuthenticated(false);
           setUserRole(null);
           setUserId(null);
         }
-      } catch (error) {
-        // Jika error, user tidak terotentikasi
-        console.error('Auth check failed:', error);
+      } else {
+        // No token found
         setIsAuthenticated(false);
         setUserRole(null);
         setUserId(null);
-      } finally {
-        console.log('Setting isLoading to false');
-        setIsLoading(false);
       }
-    };
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      setIsAuthenticated(false);
+      setUserRole(null);
+      setUserId(null);
+    } finally {
+      console.log('Setting isLoading to false');
+      setIsLoading(false);
+    }
+  };
 
+  // Check auth status on initial load and when window gains focus
+  useEffect(() => {
     checkAuthStatus();
+    
+    // Re-check auth when window gains focus (user might have logged out in another tab)
+    const handleFocus = () => {
+      checkAuthStatus();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const login = async (username: string, password: string) => {
@@ -126,6 +139,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return userRole === 'admin';
   };
 
+  // Then in the provider, pass the actual value without the nullish coalescing
   return (
     <AuthContext.Provider value={{ 
       isAuthenticated, 
@@ -134,7 +148,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       login, 
       logout, 
       isAdmin,
-      isLoading // Make sure this is included
+      isLoading
     }}>
       {children}
     </AuthContext.Provider>

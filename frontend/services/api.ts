@@ -2,7 +2,9 @@ import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-// Configure axios
+// Configure axios to include credentials with every request
+axios.defaults.withCredentials = true;
+
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -33,17 +35,19 @@ const authService = {
   },
   
   logout: async () => {
+    // Make a request to clear the cookie
+    const response = await axios.post(`${API_URL}/api/auth/logout`, {});
     // Remove token from localStorage
     localStorage.removeItem('authToken');
-    return { success: true };
+    return response.data;
   },
   
   getCurrentUser: async () => {
     try {
-      // Cek token di localStorage
+      // Get token from localStorage
       const token = localStorage.getItem('authToken');
       
-      // Set token di header jika ada
+      // Set token in header if it exists
       if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }

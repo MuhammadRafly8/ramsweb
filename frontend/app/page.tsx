@@ -2,21 +2,24 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../components/auth/authContext";
 
 export default function Home() {
   const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem("token");
-    if (token) {
-      // If logged in, redirect to matrix page
-      router.push("/matrix");
-    } else {
-      // If not logged in, redirect to login page
-      router.push("/auth/login");
+    // Only redirect after authentication check is complete
+    if (!isLoading) {
+      if (isAuthenticated) {
+        // If logged in, redirect to matrix page
+        router.push("/matrix");
+      } else {
+        // If not logged in, redirect to login page
+        router.push("/auth/login");
+      }
     }
-  }, [router]);
+  }, [isAuthenticated, isLoading, router]);
 
   // This will only show briefly before redirect
   return (
