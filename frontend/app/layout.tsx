@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Roboto_Mono } from "next/font/google";
 import "./globals.css";
+import "./matrix-custom.css"; // Add this line
 import { AuthProvider } from '../components/auth/authContext';
 import Navbar from '../components/layout/navbar';
 import { ToastContainer } from 'react-toastify';

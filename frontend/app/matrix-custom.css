@@ -1,0 +1,28 @@
+/* Style for cells containing "x" - change to green with white checkmark */
+td {
+  position: relative;
+}
+
+td:has(span:contains("x")),
+td:contains("x") {
+  background-color: #059669 !important; /* Green color */
+}
+
+/* Hide the original x */
+td:has(span:contains("x")) span,
+td:contains("x") {
+  color: transparent !important;
+}
+
+/* Add checkmark instead of x */
+td:has(span:contains("x"))::after,
+td:contains("x")::after {
+  content: "✓";
+  color: white;
+  font-weight: bold;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}

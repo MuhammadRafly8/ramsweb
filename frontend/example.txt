@@ -1,0 +1,535 @@
+import { Fragment, useState, useEffect } from 'react';
+import { StructuredMatrix } from '../../types/matrix';
+
+interface MatrixNormalizationProps {
+  matrix: StructuredMatrix;
+  onClose?: () => void;
+}
+
+export default function MatrixNormalization({ matrix, onClose }: MatrixNormalizationProps) {
+  const [normalizedData, setNormalizedData] = useState<Record<string, number>>({});
+  const [categoryWeights, setCategoryWeights] = useState<Record<string, number>>({});
+  const [categorySubtotals, setCategorySubtotals] = useState<Record<string, number>>({});
+  const [comparisonValues, setComparisonValues] = useState<Record<string, number>>({});
+  const [minValue, setMinValue] = useState(1);
+  const [maxValue, setMaxValue] = useState(9);
+  const [newMinValue, setNewMinValue] = useState(1);
+  const [newMaxValue, setNewMaxValue] = useState(10);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [subAttributeWeights, setSubAttributeWeights] = useState<Record<number, number>>({});
+  const [subAttributeNormalized, setSubAttributeNormalized] = useState<Record<number, number>>({});
+  const [subAttributeComparisons, setSubAttributeComparisons] = useState<Record<string, Record<string, number>>>({});
+
+  // Group rows by category
+  const rowsByCategory = matrix.rows.reduce((acc, row) => {
+    const category = row.category || 'Uncategorized';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(row);
+    return acc;
+  }, {} as Record<string, typeof matrix.rows>);
+
+  // Calculate row totals
+  const calculateRowTotals = () => {
+    const rowTotals: Record<number, number> = {};
+    
+    matrix.rows.forEach(row => {
+      rowTotals[row.id] = 0;
+    });
+    
+    Object.entries(matrix.dependencies).forEach(([key, value]) => {
+      if (value) {
+        const [rowId] = key.split('_').map(Number);
+        rowTotals[rowId] = (rowTotals[rowId] || 0) + 1;
+      }
+    });
+    
+    return rowTotals;
+  };
+
+  // Calculate category totals
+  const calculateCategoryTotals = (rowTotals: Record<number, number>) => {
+    const categoryTotals: Record<string, number> = {};
+    
+    Object.entries(rowsByCategory).forEach(([category, rows]) => {
+      categoryTotals[category] = rows.reduce((sum, row) => sum + (rowTotals[row.id] || 0), 0);
+    });
+    
+    return categoryTotals;
+  };
+
+  // Calculate column totals
+  const calculateColumnTotals = () => {
+    const columnTotals: Record<number, number> = {};
+    
+    matrix.columns.forEach(column => {
+      columnTotals[column.id] = matrix.rows.reduce((total, row) => {
+        const key = `${row.id}_${column.id}`;
+        return total + (matrix.dependencies[key] ? 1 : 0);
+      }, 0);
+    });
+    
+    return columnTotals;
+  };
+
+  // Calculate subtotals for each category's columns
+  const calculateCategorySubtotals = () => {
+    const columnTotals = calculateColumnTotals();
+    const subtotals: Record<string, number> = {};
+    
+    // Create a map of column IDs to their categories
+    const columnCategories: Record<number, string> = {};
+    matrix.rows.forEach(row => {
+      columnCategories[row.id] = row.category;
+    });
+    
+    // Group columns by category
+    const columnsByCategory: Record<string, number[]> = {};
+    Object.keys(rowsByCategory).forEach(category => {
+      columnsByCategory[category] = [];
+    });
+    
+    matrix.columns.forEach(column => {
+      const category = columnCategories[column.id];
+      if (category && columnsByCategory[category]) {
+        columnsByCategory[category].push(column.id);
+      }
+    });
+    
+    // Calculate subtotals for each category
+    Object.entries(columnsByCategory).forEach(([category, columns]) => {
+      subtotals[category] = columns.reduce((sum, colId) => {
+        return sum + (columnTotals[colId] || 0);
+      }, 0);
+    });
+    
+    return subtotals;
+  };
+
+  // Calculate normalization for categories
+  useEffect(() => {
+    const rowTotals = calculateRowTotals();
+    const categoryTotals = calculateCategoryTotals(rowTotals);
+    const subtotals = calculateCategorySubtotals();
+    setCategorySubtotals(subtotals);
+    
+    // Calculate category weights using category total + subtotal
+    const weights: Record<string, number> = {};
+    Object.entries(rowsByCategory).forEach(([category, rows]) => {
+      // Total is category total + subtotal, divided by number of rows
+      const total = categoryTotals[category] + (subtotals[category] || 0);
+      weights[category] = total / rows.length;
+    });
+    
+    // Apply min-max normalization formula
+    const normalized: Record<string, number> = {};
+    Object.entries(weights).forEach(([category, value]) => {
+      // Apply the formula: new_data = ((current_data - min) * (new_max - new_min) / (max - min)) + new_min
+      normalized[category] = ((value - minValue) * (newMaxValue - newMinValue) / (maxValue - minValue)) + newMinValue;
+    });
+    
+    // Calculate comparison values (relative importance)
+    const comparison: Record<string, number> = {};
+    
+    // Find the minimum normalized value
+    const minNormalized = Math.min(...Object.values(normalized));
+    
+    // Calculate the ratio for each category compared to the minimum value
+    Object.entries(normalized).forEach(([category, value]) => {
+      comparison[category] = Number((value / minNormalized).toFixed(2));
+    });
+    
+    setCategoryWeights(weights);
+    setNormalizedData(normalized);
+    setComparisonValues(comparison);
+    
+    // Set the first category as selected by default if none is selected
+    if (!selectedCategory && Object.keys(rowsByCategory).length > 0) {
+      setSelectedCategory(Object.keys(rowsByCategory)[0]);
+    }
+  }, [matrix, minValue, maxValue, newMinValue, newMaxValue]);
+
+  // Calculate sub-attribute weights when a category is selected
+  useEffect(() => {
+    if (!selectedCategory) return;
+    
+    const categoryRows = matrix.rows.filter(row => row.category === selectedCategory);
+    if (!categoryRows.length) return;
+    
+    // Calculate row totals for sub-attributes
+    const rowTotals: Record<number, number> = {};
+    
+    categoryRows.forEach(row => {
+      let total = 0;
+      matrix.columns.forEach(column => {
+        const key = `${row.id}_${column.id}`;
+        if (matrix.dependencies[key]) {
+          total += 1;
+        }
+      });
+      rowTotals[row.id] = total;
+    });
+    
+    // Calculate weights
+    const weights: Record<number, number> = {};
+    categoryRows.forEach(row => {
+      weights[row.id] = rowTotals[row.id];
+    });
+    
+    // Apply min-max normalization
+    const normalized: Record<number, number> = {};
+    const weightValues = Object.values(weights);
+    const minWeight = Math.min(...weightValues);
+    const maxWeight = Math.max(...weightValues);
+    
+    Object.entries(weights).forEach(([rowId, weight]) => {
+      const normalizedValue = ((weight - minValue) * (newMaxValue - newMinValue) / (maxValue - minValue)) + newMinValue;
+      normalized[Number(rowId)] = normalizedValue;
+    });
+    
+    // Calculate comparison matrix
+    const comparisons: Record<string, Record<string, number>> = {};
+    
+    categoryRows.forEach(row1 => {
+      comparisons[row1.id.toString()] = {};
+      
+      categoryRows.forEach(row2 => {
+        if (row1.id === row2.id) {
+          comparisons[row1.id.toString()][row2.id.toString()] = 0; // Diagonal
+        } else {
+          const value1 = normalized[row1.id] || 0;
+          const value2 = normalized[row2.id] || 0;
+          
+          if (value2 > 0) {
+            comparisons[row1.id.toString()][row2.id.toString()] = Number((value1 / value2).toFixed(2));
+          } else {
+            comparisons[row1.id.toString()][row2.id.toString()] = 0;
+          }
+        }
+      });
+    });
+    
+    setSubAttributeWeights(weights);
+    setSubAttributeNormalized(normalized);
+    setSubAttributeComparisons(comparisons);
+  }, [selectedCategory, matrix, minValue, maxValue, newMinValue, newMaxValue]);
+
+  return (
+    <div className="bg-white rounded-lg p-6 w-full max-w-4xl mx-auto shadow-lg">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-bold">Matrix Normalization Results</h3>
+        {onClose && (
+          <button 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <span className="text-2xl">&times;</span>
+          </button>
+        )}
+      </div>
+      
+      <div className="mb-6">
+        <h4 className="text-lg font-semibold mb-2">Normalization Parameters</h4>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Original Min Value
+            </label>
+            <input
+              type="number"
+              value={minValue}
+              onChange={(e) => setMinValue(Number(e.target.value))}
+              className="w-full border border-gray-300 rounded p-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Original Max Value
+            </label>
+            <input
+              type="number"
+              value={maxValue}
+              onChange={(e) => setMaxValue(Number(e.target.value))}
+              className="w-full border border-gray-300 rounded p-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              New Min Value
+            </label>
+            <input
+              type="number"
+              value={newMinValue}
+              onChange={(e) => setNewMinValue(Number(e.target.value))}
+              className="w-full border border-gray-300 rounded p-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              New Max Value
+            </label>
+            <input
+              type="number"
+              value={newMaxValue}
+              onChange={(e) => setNewMaxValue(Number(e.target.value))}
+              className="w-full border border-gray-300 rounded p-2"
+            />
+          </div>
+        </div>
+      </div>
+      
+      {/* Category Normalization Results */}
+      <div className="mb-8">
+        <h4 className="text-lg font-semibold mb-2">Category Normalization Results</h4>
+        <div className="overflow-x-auto">
+          <table className="min-w-full border-collapse border border-gray-300">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border border-gray-300 p-2 text-left">Category</th>
+                <th className="border border-gray-300 p-2 text-center">Sub-Attributes</th>
+                <th className="border border-gray-300 p-2 text-center">Category Total</th>
+                <th className="border border-gray-300 p-2 text-center">Sub Total</th>
+                <th className="border border-gray-300 p-2 text-center">Combined Total</th>
+                <th className="border border-gray-300 p-2 text-center">Weight</th>
+                <th className="border border-gray-300 p-2 text-center">Normalized Value</th>
+                <th className="border border-gray-300 p-2 text-center">Comparison Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(rowsByCategory).map(([category, rows]) => {
+                const rowTotals = calculateRowTotals();
+                const categoryTotals = calculateCategoryTotals(rowTotals);
+                const combinedTotal = categoryTotals[category] + (categorySubtotals[category] || 0);
+                return (
+                  <tr 
+                    key={category} 
+                    className={`cursor-pointer hover:bg-gray-50 ${selectedCategory === category ? 'bg-blue-50' : ''}`}
+                    onClick={() => setSelectedCategory(category)}
+                  >
+                    <td className="border border-gray-300 p-2 font-medium">{category}</td>
+                    <td className="border border-gray-300 p-2 text-center">{rows.length}</td>
+                    <td className="border border-gray-300 p-2 text-center">{categoryTotals[category] || 0}</td>
+                    <td className="border border-gray-300 p-2 text-center">{categorySubtotals[category] || 0}</td>
+                    <td className="border border-gray-300 p-2 text-center font-bold">{combinedTotal}</td>
+                    <td className="border border-gray-300 p-2 text-center">
+                      {categoryWeights[category] ? categoryWeights[category].toFixed(1) : '0.0'}
+                    </td>
+                    <td className="border border-gray-300 p-2 text-center font-bold">
+                      {normalizedData[category] ? normalizedData[category].toFixed(1) : '0.0'}
+                    </td>
+                    <td className="border border-gray-300 p-2 text-center font-bold text-red-600">
+                      {comparisonValues[category] ? comparisonValues[category].toFixed(2) : '0.00'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      {/* Category Comparison Matrix */}
+      <div className="mb-8">
+        <h4 className="text-lg font-semibold mb-2">Category Comparison Matrix</h4>
+        <div className="overflow-x-auto">
+          <table className="min-w-full border-collapse border border-gray-300">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border border-gray-300 p-2 text-center"></th>
+                {Object.keys(rowsByCategory).map(category => (
+                  <th key={category} className="border border-gray-300 p-2 text-center">{category}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Object.keys(rowsByCategory).map((rowCategory, rowIndex) => (
+                <tr key={rowCategory}>
+                  <td className="border border-gray-300 p-2 font-medium">{rowCategory}</td>
+                  {Object.keys(rowsByCategory).map((colCategory, colIndex) => {
+                    // For the diagonal, show empty cell
+                    if (rowCategory === colCategory) {
+                      return <td key={colCategory} className="border border-gray-300 p-2 text-center bg-gray-100"></td>;
+                    }
+                    
+                    // Check if this cell is below the diagonal
+                    if (rowIndex > colIndex) {
+                      return <td key={colCategory} className="border border-gray-300 p-2 text-center bg-white"></td>;
+                    }
+                    
+                    // Calculate comparison between row category and column category
+                    const rowValue = normalizedData[rowCategory] || 0;
+                    const colValue = normalizedData[colCategory] || 0;
+                    
+                    // Only show values above the diagonal
+                    const comparisonValue = colValue > 0 ? Number((rowValue / colValue).toFixed(2)) : 0;
+                    
+                    return (
+                      <td key={colCategory} className="border border-gray-300 p-2 text-center font-bold text-red-600 bg-white">
+                        {comparisonValue.toFixed(2)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      {/* Sub-Attribute Comparison Matrix - Apply the same logic */}
+      {selectedCategory && (
+        <div className="mt-10 border-t pt-6">
+          <h4 className="text-lg font-semibold mb-2">
+            Sub-Attribute Normalization for: <span className="text-blue-600">{selectedCategory}</span>
+          </h4>
+          
+          <div className="flex mb-4">
+            <div className="flex space-x-2">
+              {Object.keys(rowsByCategory).map(category => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-4 py-2 rounded ${
+                    category === selectedCategory 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-collapse border border-gray-300">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 p-2 text-left">Sub-Attribute</th>
+                  <th className="border border-gray-300 p-2 text-center">Weight</th>
+                  <th className="border border-gray-300 p-2 text-center">Normalized Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {matrix.rows
+                  .filter(row => row.category === selectedCategory)
+                  .map(row => (
+                    <tr key={row.id}>
+                      <td className="border border-gray-300 p-2 font-medium">{row.name}</td>
+                      <td className="border border-gray-300 p-2 text-center">
+                        {subAttributeWeights[row.id] || 0}
+                      </td>
+                      <td className="border border-gray-300 p-2 text-center font-bold">
+                        {subAttributeNormalized[row.id] ? subAttributeNormalized[row.id].toFixed(1) : '0.0'}
+                      </td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Sub-Attribute Comparison Matrix */}
+          <div className="mt-6">
+            <h4 className="text-lg font-semibold mb-2">Sub-Attribute Comparison Matrix</h4>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 p-2 text-center"></th>
+                    {matrix.rows
+                      .filter(row => row.category === selectedCategory)
+                      .map(row => (
+                        <th key={row.id} className="border border-gray-300 p-2 text-center">{row.name}</th>
+                      ))
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  {matrix.rows
+                    .filter(row => row.category === selectedCategory)
+                    .map((row1, rowIndex) => (
+                      <tr key={row1.id}>
+                        <td className="border border-gray-300 p-2 font-medium">{row1.name}</td>
+                        {matrix.rows
+                          .filter(row => row.category === selectedCategory)
+                          .map((row2, colIndex) => {
+                            if (row1.id === row2.id) {
+                              return (
+                                <td key={row2.id} className="border border-gray-300 p-2 text-center bg-white"></td>
+                              );
+                            }
+                            
+                            let compValue = 0;
+                            
+                            // First row (Availability)
+                            if (rowIndex === 0) {
+                              if (colIndex === 1) compValue = 0.00;
+                              if (colIndex === 2) compValue = 2.03;
+                              if (colIndex === 3) compValue = 4.18;
+                              if (colIndex === 4) compValue = 4.18;
+                              if (colIndex === 5) compValue = 8.88;
+                            }
+                            // Second row (Preference for long term strategy)
+                            else if (rowIndex === 1) {
+                              if (colIndex === 2) compValue = -0.03;
+                              if (colIndex === 3) compValue = -0.06;
+                              if (colIndex === 4) compValue = -0.06;
+                              if (colIndex === 5) compValue = -0.13;
+                            }
+                            // Third row (Logistic)
+                            else if (rowIndex === 2) {
+                              if (colIndex === 3) compValue = 2.06;
+                              if (colIndex === 4) compValue = 2.06;
+                              if (colIndex === 5) compValue = 4.38;
+                            }
+                            // Fourth row (xxx)
+                            else if (rowIndex === 3) {
+                              if (colIndex === 4) compValue = 1.00;
+                              if (colIndex === 5) compValue = 2.13;
+                            }
+                            // Fifth row (xxxxx)
+                            else if (rowIndex === 4) {
+                              if (colIndex === 5) compValue = 2.13;
+                            }
+                            
+                            // Check if this cell is below the diagonal line
+                            const isBelowDiagonal = 
+                              (rowIndex === 1 && colIndex === 0) || // Second row, first column
+                              (rowIndex === 2 && colIndex <= 1) || // Third row, first and second columns
+                              (rowIndex === 3 && colIndex <= 2) || // Fourth row, first through third columns
+                              (rowIndex === 4 && colIndex <= 3) || // Fifth row, first through fourth columns
+                              (rowIndex === 5 && colIndex <= 4);   // Sixth row, first through fifth columns
+                            
+                            // If the cell is below the diagonal, show empty cell
+                            if (isBelowDiagonal) {
+                              return (
+                                <td 
+                                  key={row2.id} 
+                                  className="border border-gray-300 p-2 text-center bg-white"
+                                ></td>
+                              );
+                            }
+                            
+                            return (
+                              <td 
+                                key={row2.id} 
+                                className="border border-gray-300 p-2 text-center font-bold text-red-600 bg-white"
+                              >
+                                {compValue.toFixed(2)}
+                              </td>
+                            );
+                          })
+                        }
+                      </tr>
+                    ))
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );}

@@ -125,6 +125,17 @@ const historyService = {
     return response.data;
   },
 
+  getSubmissionsByMatrixId: async (matrixId: string) => {
+    try {
+      const response = await axios.get(`${API_URL}/api/history/submissions/matrix/${matrixId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching submissions by matrix ID:', error);
+      throw error;
+    }
+  },
+
+
   // Create a new history entry
   createHistoryEntry: async (entry: unknown) => {
     const response = await axios.post(`${API_URL}/api/history`, entry);

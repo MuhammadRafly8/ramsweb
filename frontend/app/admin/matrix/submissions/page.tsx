@@ -9,6 +9,8 @@ import historyService, { HistoryEntry } from "../../../../services/historyServic
 import Link from 'next/link';
 import React from 'react';
 import MatrixSnapshotViewer from '../../../../components/matrix/matrixSnapshotViewer';
+import MatrixNormalization from '../../../../components/matrix/matrixNormalization';
+import { matrixService } from '../../../../services/api';
 
 interface StructuredMatrix {
   rows: { id: number; name: string; category: string }[];
@@ -16,11 +18,24 @@ interface StructuredMatrix {
   dependencies: Record<string, boolean>;
 }
 
+interface MatrixSubmission {
+  id: string;
+  userId: string;
+  username: string;
+  matrixId: string;
+  data: StructuredMatrix;
+  createdAt: string;
+}
+
 export default function MatrixSubmissionsPage() {
   const [submissions, setSubmissions] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMatrix, setSelectedMatrix] = useState<StructuredMatrix | null>(null);
   const [showMatrixModal, setShowMatrixModal] = useState(false);
+  const [showNormalizationModal, setShowNormalizationModal] = useState(false);
+  const [selectedMatrixId, setSelectedMatrixId] = useState<string | null>(null);
+  const [matrixSubmissions, setMatrixSubmissions] = useState<MatrixSubmission[]>([]);
+  const [groupedSubmissions, setGroupedSubmissions] = useState<Record<string, HistoryEntry[]>>({});
   const router = useRouter();
 
   // In your useEffect function for fetching submissions
@@ -41,9 +56,22 @@ export default function MatrixSubmissionsPage() {
         console.log('Filtered submission entries:', submissionEntries.length);
         
         // Sort by timestamp (newest first)
-        setSubmissions(submissionEntries.sort((a: HistoryEntry, b: HistoryEntry) => 
+        const sortedSubmissions = submissionEntries.sort((a: HistoryEntry, b: HistoryEntry) => 
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        ));
+        );
+        
+        setSubmissions(sortedSubmissions);
+        
+        // Group submissions by matrixId
+        const grouped: Record<string, HistoryEntry[]> = {};
+        sortedSubmissions.forEach(submission => {
+          if (!grouped[submission.matrixId]) {
+            grouped[submission.matrixId] = [];
+          }
+          grouped[submission.matrixId].push(submission);
+        });
+        
+        setGroupedSubmissions(grouped);
       } catch (error) {
         console.error("Error loading submissions:", error);
         toast.error("Failed to load submission data");
@@ -152,124 +180,212 @@ export default function MatrixSubmissionsPage() {
   const viewMatrixDetails = (matrixId: string) => {
     router.push(`/matrix/${matrixId}`);
   };
-
-  const viewMatrixHistory = (matrixId: string) => {
-    router.push(`/matrix/${matrixId}/history`);
+  
+  // New function to open normalization modal
+  const openNormalizationModal = async (matrixId: string) => {
+    try {
+      setSelectedMatrixId(matrixId);
+      
+      // Fetch matrix details
+      const matrixDetails = await matrixService.getMatrixById(matrixId);
+      setSelectedMatrix(matrixDetails.data);
+      
+      // Fetch submissions for this matrix
+      const submissions = await historyService.getSubmissionsByMatrixId(matrixId);
+      setMatrixSubmissions(submissions as MatrixSubmission[]);
+      
+      // Show normalization modal
+      setShowNormalizationModal(true);
+    } catch (error) {
+      console.error("Error fetching data for normalization:", error);
+      toast.error("Failed to load data for normalization");
+    }
+  };
+  
+  // Function to close normalization modal
+  const closeNormalizationModal = () => {
+    setShowNormalizationModal(false);
+    setSelectedMatrix(null);
+    setSelectedMatrixId(null);
   };
 
   return (
     <AdminRoute>
-      <main className="flex-grow container mx-auto p-4">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Matrix Submissions</h2>
-            <Link href="/admin/matrix" className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100">
-              Back to Matrices
-            </Link>
+      <div className="container mx-auto p-4">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Matrix Submissions</h1>
+          <Link href="/admin/matrix" className="text-blue-600 hover:underline">
+            Back to Matrices
+          </Link>
+        </div>
+        
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-4">Loading submissions...</p>
           </div>
-          
-          <div className="mb-4">
-            <p className="text-gray-600">
-              This page shows all user submissions for matrices. Each submission includes the user who submitted it and any comments they provided.
-            </p>
-          </div>
-          
-          {loading ? (
-            <div className="text-center py-4">Loading submissions...</div>
-          ) : submissions.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No submissions found.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse border border-gray-300">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-gray-300 p-2">Time</th>
-                    <th className="border border-gray-300 p-2">User</th>
-                    <th className="border border-gray-300 p-2">Role</th>
-                    <th className="border border-gray-300 p-2">Matrix ID</th>
-                    <th className="border border-gray-300 p-2">Details</th>
-                    <th className="border border-gray-300 p-2">View Matrix</th>
-                    <th className="border border-gray-300 p-2">View History</th>
-                    <th className="border border-gray-300 p-2">View Snapshot</th>
-                    <th className="border border-gray-300 p-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {submissions.map((entry) => (
-                    <tr key={entry.id} className="bg-white hover:bg-gray-50">
-                      <td className="border border-gray-300 p-2">
-                        {format(new Date(entry.timestamp), 'yyyy-MM-dd HH:mm:ss')}
-                      </td>
-                      <td className="border border-gray-300 p-2">{entry.userId}</td>
-                      <td className="border border-gray-300 p-2">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          entry.userRole === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {entry.userRole}
+        ) : (
+          <>
+            {/* Matrix Grouping Section */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-4">Submissions by Matrix</h2>
+              
+              {Object.keys(groupedSubmissions).length === 0 ? (
+                <p className="text-gray-500">No submissions found</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Object.entries(groupedSubmissions).map(([matrixId, entries]) => (
+                    <div key={matrixId} className="border rounded-lg p-4 bg-white shadow-sm">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-medium">Matrix ID: {matrixId.substring(0, 8)}...</h3>
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                          {entries.length} submissions
                         </span>
-                      </td>
-                      <td className="border border-gray-300 p-2">{entry.matrixId}</td>
-                      <td className="border border-gray-300 p-2">
-                        {entry.details}
-                      </td>
-                      <td className="border border-gray-300 p-2 text-center">
+                      </div>
+                      <div className="text-sm text-gray-600 mb-3">
+                        Last submission: {format(new Date(entries[0].timestamp), 'MMM d, yyyy HH:mm')}
+                      </div>
+                      <div className="flex space-x-2">
                         <button
-                          onClick={() => entry.matrixId ? viewMatrixDetails(entry.matrixId) : null}
-                          className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-500"
+                          onClick={() => viewMatrixDetails(matrixId)}
+                          className="text-xs bg-blue-600 hover:bg-blue-700 text-white py-1 px-2 rounded"
                         >
                           View Matrix
                         </button>
-                      </td>
-                      <td className="border border-gray-300 p-2 text-center">
-                        {entry.matrixId && (
+                        <button
+                          onClick={() => openNormalizationModal(matrixId)}
+                          className="text-xs bg-green-600 hover:bg-green-700 text-white py-1 px-2 rounded"
+                        >
+                          Normalize Data
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <h2 className="text-xl font-semibold mb-4">All Submissions</h2>
+            
+            {submissions.length === 0 ? (
+              <p className="text-gray-500">No submissions found</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full bg-white border border-gray-200">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="py-2 px-4 border-b text-left">Time</th>
+                      <th className="py-2 px-4 border-b text-left">User</th>
+                      <th className="py-2 px-4 border-b text-left">Role</th>
+                      <th className="py-2 px-4 border-b text-left">Matrix ID</th>
+                      <th className="py-2 px-4 border-b text-left">Details</th>
+                      <th className="py-2 px-4 border-b text-center">View Matrix</th>
+                      <th className="py-2 px-4 border-b text-center">View History</th>
+                      <th className="py-2 px-4 border-b text-center">View Snapshot</th>
+                      <th className="py-2 px-4 border-b text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {submissions.map((entry) => (
+                      <tr key={entry.id} className="hover:bg-gray-50">
+                        <td className="py-2 px-4 border-b">
+                          {format(new Date(entry.timestamp), 'yyyy-MM-dd HH:mm:ss')}
+                        </td>
+                        <td className="py-2 px-4 border-b">
+                          {entry.user?.username || 'Unknown'}
+                        </td>
+                        <td className="py-2 px-4 border-b">
+                          <span className={`inline-block px-2 py-1 text-xs rounded ${
+                            entry.user?.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {entry.user?.role || 'user'}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 border-b">
+                          {entry.matrixId}
+                        </td>
+                        <td className="py-2 px-4 border-b">
+                          {entry.details || 'User submitted matrix'}
+                        </td>
+                        <td className="py-2 px-4 border-b text-center">
                           <button
-                            onClick={() => viewMatrixHistory(entry.matrixId)}
-                            className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-500"
+                            onClick={() => viewMatrixDetails(entry.matrixId)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm"
+                          >
+                            View Matrix
+                          </button>
+                        </td>
+                        <td className="py-2 px-4 border-b text-center">
+                          <Link 
+                            href={`/matrix/${entry.matrixId}/history`}
+                            className="bg-purple-600 hover:bg-purple-700 text-white py-1 px-3 rounded text-sm inline-block"
                           >
                             History
-                          </button>
-                        )}
-                      </td>
-                      <td className="border border-gray-300 p-2 text-center">
-                        {entry.matrixSnapshot && (
+                          </Link>
+                        </td>
+                        <td className="py-2 px-4 border-b text-center">
                           <button
-                            onClick={() => entry.matrixSnapshot ? viewMatrix(entry.matrixSnapshot) : null}
-                            className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-500"
+                            onClick={() => entry.matrixSnapshot && viewMatrix(entry.matrixSnapshot)}
+                            disabled={!entry.matrixSnapshot}
+                            className={`py-1 px-3 rounded text-sm ${
+                              entry.matrixSnapshot 
+                                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            }`}
                           >
                             View Snapshot
                           </button>
-                        )}
-                      </td>
-                      <td className="border border-gray-300 p-2 text-center">
-                        <button
-                          onClick={() => entry.id && handleDeleteSubmission(entry.id)}
-                          className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-500"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                        </td>
+                        <td className="py-2 px-4 border-b text-center">
+                          <button
+                            onClick={() => handleDeleteSubmission(entry.id)}
+                            className="bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded text-sm"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
         
-        {/* Matrix Modal */}
+        {/* Matrix Snapshot Viewer Modal */}
         {showMatrixModal && selectedMatrix && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="w-[98vw] h-[98vh]">
-              <MatrixSnapshotViewer 
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
+              <div className="p-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold">Matrix Snapshot</h3>
+                  <button 
+                    onClick={closeMatrixModal}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <span className="text-2xl">&times;</span>
+                  </button>
+                </div>
+                <MatrixSnapshotViewer matrix={selectedMatrix} />
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Matrix Normalization Modal */}
+        {showNormalizationModal && selectedMatrix && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-auto">
+              <MatrixNormalization 
                 matrix={selectedMatrix} 
-                onClose={closeMatrixModal} 
+                submissions={matrixSubmissions}
+                onClose={closeNormalizationModal} 
               />
             </div>
           </div>
         )}
-      </main>
+      </div>
     </AdminRoute>
   );
 }

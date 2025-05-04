@@ -69,13 +69,76 @@ export default function AdminMatrixPage() {
         { id: 1, name: "Availability", category: "Technical/Ops" },
         { id: 2, name: "Preference for long term strategy", category: "Technical/Ops" },
         { id: 3, name: "Logistic", category: "Technical/Ops" },
+        { id: 4, name: "xxx", category: "Technical/Ops" },
+        { id: 5, name: "xxxxx", category: "Technical/Ops" },
+        { id: 6, name: "hhhhh", category: "Technical/Ops" },
+        { id: 7, name: "qqqqq", category: "Safety" },
+        { id: 8, name: "dddd", category: "Safety" },
+        { id: 9, name: "xxxxxxxxx", category: "Safety" },
       ],
       columns: [
-        { id: 1, name: "1" },
-        { id: 2, name: "2" },
-        { id: 3, name: "3" },
+        { id: 1, name: "1", color: "gray" },
+        { id: 2, name: "2", color: "gray" },
+        { id: 3, name: "3", color: "gray" },
+        { id: 4, name: "4", color: "gray" },
+        { id: 5, name: "5", color: "gray" },
+        { id: 6, name: "6", color: "gray" },
+        { id: 7, name: "7", color: "gray" },
+        { id: 8, name: "8", color: "gray" },
+        { id: 9, name: "9", color: "gray" },
       ],
-      dependencies: {}
+      dependencies: {
+        // Row 1 (Availability) - all columns filled
+        "1_1": true,
+        "1_2": true,
+        "1_3": true,
+        "1_4": true,
+        "1_5": true,
+        "1_6": true,
+        "1_7": true,
+        "1_8": true,
+        
+        // Row 2 (Preference for long term strategy)
+        "2_3": true,
+        "2_4": true,
+        "2_5": true,
+        "2_7": true,
+        "2_9": true,
+        
+        // Row 3 (Logistic)
+        "3_2": true,
+        "3_4": true,
+        "3_5": true,
+        "3_7": true,
+        "3_8": true,
+        "3_9": true,
+        
+        // Row 4 (xxx)
+        "4_3": true,
+        "4_5": true,
+        "4_7": true,
+        
+        // Row 5 (xxxxx)
+        "5_3": true,
+        "5_5": true,
+        "5_7": true,
+        
+        // Row 6 (hhhhh)
+        "6_3": true,
+        "6_7": true,
+        
+        // Row 7 (qqqqq)
+        "7_7": true,
+        
+        // Row 8 (dddd)
+        "8_8": true,
+      },
+      // Add styling configuration
+      style: {
+        cellColor: "gray",
+        dependencySymbol: "✓",
+        symbolColor: "white"
+      }
     };
 
     try {

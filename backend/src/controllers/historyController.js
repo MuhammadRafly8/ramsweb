@@ -175,9 +175,66 @@ async function deleteHistoryEntry(req, res) {
   }
 }
 
+// Add this function to your historyController.js
+const getSubmissionsByMatrixId = async (req, res) => {
+  try {
+    const { matrixId } = req.params;
+    
+    // Find all submissions for this matrix
+    const submissions = await History.findAll({
+      where: { 
+        matrixId,
+        action: 'submit_matrix' // Filter by action type
+      },
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'username']
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    
+    // Format the response
+    const formattedSubmissions = submissions.map(submission => {
+      // Parse the matrix snapshot
+      let data = {};
+      try {
+        if (submission.matrixSnapshot) {
+          data = JSON.parse(submission.matrixSnapshot);
+          // Handle different data structures
+          if (data.data) {
+            data = data.data;
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing matrix snapshot:', e);
+      }
+      
+      return {
+        id: submission.id,
+        userId: submission.userId,
+        username: submission.User ? submission.User.username : 'Unknown',
+        matrixId: submission.matrixId,
+        data: data,
+        createdAt: submission.createdAt
+      };
+    });
+    
+    res.status(200).json(formattedSubmissions);
+  } catch (error) {
+    console.error('Error fetching submissions by matrix ID:', error);
+    res.status(500).json({ error: 'Failed to fetch submissions' });
+  }
+};
+
+// Make sure to add this to your exports
 module.exports = {
+  // Include your existing exports
   getAllHistory,
   getHistoryByMatrixId,
   createHistoryEntry,
-  deleteHistoryEntry
+  deleteHistoryEntry,
+  // Add the new function
+  getSubmissionsByMatrixId
 };

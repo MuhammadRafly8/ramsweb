@@ -19,6 +19,8 @@ export default function EditMatrixPage() {
   const [newSubAttributeCategory, setNewSubAttributeCategory] = useState("Technical/Ops");
   const [newSubAttributeId, setNewSubAttributeId] = useState<number | null>(null);
   const [showAddSubAttributeForm, setShowAddSubAttributeForm] = useState(false);
+  const [customCategory, setCustomCategory] = useState("");
+  const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
   
   const router = useRouter();
   const params = useParams();
@@ -152,6 +154,130 @@ export default function EditMatrixPage() {
     setHasUnsavedChanges(true);
   };
 
+  // Get unique categories from existing rows
+  const getUniqueCategories = () => {
+    if (!matrix) return ["Technical/Ops", "Safety"];
+    
+    const categories = new Set<string>();
+    matrix.data.rows.forEach(row => {
+      if (row.category) {
+        categories.add(row.category);
+      }
+    });
+    
+    return Array.from(categories);
+  };
+
+  const handleAddSubAttribute = () => {
+    if (!matrix || !newSubAttribute) return;
+    
+    // Get all existing IDs
+    const existingIds = matrix.data.rows.map(row => row.id);
+    
+    // If ID is provided and already exists, we need to shift IDs
+    if (newSubAttributeId !== null) {
+      // Check if the ID already exists
+      const idExists = existingIds.includes(newSubAttributeId);
+      
+      if (idExists) {
+        // Create a new matrix with shifted IDs for rows with ID >= newSubAttributeId
+        const updatedRows = [...matrix.data.rows].map(row => {
+          if (row.id >= newSubAttributeId) {
+            // Shift ID up by 1
+            return { ...row, id: row.id + 1 };
+          }
+          return row;
+        });
+        
+        // Update dependencies to match the new IDs
+        const updatedDependencies: Record<string, boolean> = {};
+        Object.entries(matrix.data.dependencies).forEach(([key, value]) => {
+          const [rowId, colId] = key.split('_').map(Number);
+          
+          let newRowId = rowId;
+          let newColId = colId;
+          
+          if (rowId >= newSubAttributeId) {
+            newRowId = rowId + 1;
+          }
+          
+          if (colId >= newSubAttributeId) {
+            newColId = colId + 1;
+          }
+          
+          updatedDependencies[`${newRowId}_${newColId}`] = value;
+        });
+        
+        // Insert the new row at the specified position
+        updatedRows.splice(newSubAttributeId - 1, 0, {
+          id: newSubAttributeId,
+          name: newSubAttribute,
+          category: showCustomCategoryInput ? customCategory : newSubAttributeCategory
+        });
+        
+        const updatedMatrix = {
+          ...matrix,
+          data: {
+            ...matrix.data,
+            rows: updatedRows,
+            dependencies: updatedDependencies
+          }
+        };
+        
+        setMatrix(updatedMatrix);
+        calculateTotals(updatedMatrix.data);
+      } else {
+        // ID doesn't exist, just add the new row
+        const updatedMatrix = {
+          ...matrix,
+          data: {
+            ...matrix.data,
+            rows: [
+              ...matrix.data.rows,
+              {
+                id: newSubAttributeId,
+                name: newSubAttribute,
+                category: showCustomCategoryInput ? customCategory : newSubAttributeCategory
+              }
+            ]
+          }
+        };
+        
+        setMatrix(updatedMatrix);
+        calculateTotals(updatedMatrix.data);
+      }
+    } else {
+      // No ID provided, use the next available ID
+      const nextId = Math.max(0, ...existingIds) + 1;
+      
+      const updatedMatrix = {
+        ...matrix,
+        data: {
+          ...matrix.data,
+          rows: [
+            ...matrix.data.rows,
+            {
+              id: nextId,
+              name: newSubAttribute,
+              category: showCustomCategoryInput ? customCategory : newSubAttributeCategory
+            }
+          ]
+        }
+      };
+      
+      setMatrix(updatedMatrix);
+      calculateTotals(updatedMatrix.data);
+    }
+    
+    // Reset form
+    setNewSubAttribute("");
+    setNewSubAttributeId(null);
+    setShowAddSubAttributeForm(false);
+    setCustomCategory("");
+    setShowCustomCategoryInput(false);
+    setHasUnsavedChanges(true);
+  };
+
   if (loading) {
     return (
       <AdminRoute>
@@ -247,103 +373,95 @@ export default function EditMatrixPage() {
           <div className="mb-4">
             <button
               onClick={() => setShowAddSubAttributeForm(!showAddSubAttributeForm)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             >
-              {showAddSubAttributeForm ? "Cancel" : "Add New Sub-Attribute"}
+              {showAddSubAttributeForm ? "Cancel" : "Add Sub-Attribute"}
             </button>
             
             {showAddSubAttributeForm && (
-              <div className="w-full md:w-auto flex flex-col md:flex-row gap-2 mt-2 md:mt-0">
-                <select
-                  value={newSubAttributeCategory}
-                  onChange={(e) => setNewSubAttributeCategory(e.target.value)}
-                  className="p-1.5 border border-gray-300 rounded text-sm"
-                >
-                  <option value="Technical/Ops">Technical/Ops</option>
-                  <option value="Safety">Safety</option>
-                  <option value="Economy">Economy</option>
-                  <option value="other">Other</option>
-                </select>
-                <input
-                  type="text"
-                  value={newSubAttribute}
-                  onChange={(e) => setNewSubAttribute(e.target.value)}
-                  placeholder="Enter new sub-attribute name"
-                  className="p-1.5 border border-gray-300 rounded text-sm flex-grow"
-                />
-                <input
-                  type="number"
-                  min="1"
-                  placeholder="ID (optional)"
-                  className="p-1.5 border border-gray-300 rounded text-sm w-24"
-                  onChange={(e) => {
-                    const value = parseInt(e.target.value);
-                    if (!isNaN(value) && value > 0) {
-                      setNewSubAttributeId(value);
-                    } else {
-                      setNewSubAttributeId(null);
-                    }
-                  }}
-                />
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => {
-                      if (!matrix) return;
-                      
-                      // Determine new ID
-                      let newId;
-                      if (newSubAttributeId) {
-                        // Use user-provided ID
-                        newId = newSubAttributeId;
-                      } else {
-                        // Use highest ID + 1 (default)
-                        newId = Math.max(...matrix.data.rows.map(row => row.id)) + 1;
-                      }
-                      
-                      // Check if ID already exists
-                      const idExists = matrix.data.rows.some(row => row.id === newId);
-                      if (idExists) {
-                        toast.error(`ID ${newId} already exists. Please choose a different ID.`);
-                        return;
-                      }
-                      
-                      const newRow = {
-                        id: newId,
-                        name: newSubAttribute,
-                        category: newSubAttributeCategory
-                      };
-                      
-                      // Update matrix with new row
-                      const updatedMatrix = {
-                        ...matrix,
-                        data: {
-                          ...matrix.data,
-                          rows: [...matrix.data.rows, newRow],
-                          columns: [...matrix.data.columns, { id: newId, name: newId.toString() }]
-                        }
-                      };
-                      
-                      setMatrix(updatedMatrix);
-                      calculateTotals(updatedMatrix.data);
-                      setHasUnsavedChanges(true);
-                      
-                      // Reset form
-                      setNewSubAttribute('');
-                      setNewSubAttributeId(null);
-                      setShowAddSubAttributeForm(false);
-                      
-                      toast.success(`New sub-attribute added with ID: ${newId}`);
-                    }}
-                    className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-                    disabled={!newSubAttribute.trim()}
+              <div className="mt-2 p-4 border rounded">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">ID</label>
+                    <input
+                      type="number"
+                      value={newSubAttributeId || ""}
+                      onChange={(e) => setNewSubAttributeId(e.target.value ? parseInt(e.target.value) : null)}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                      placeholder="Leave empty for auto-assign"
+                    />
+                    {newSubAttributeId !== null && matrix.data.rows.some(row => row.id === newSubAttributeId) && (
+                      <p className="text-yellow-600 text-xs mt-1">
+                        ID {newSubAttributeId} already exists. Adding will shift existing IDs.
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Sub-Attribute Name</label>
+                    <input
+                      type="text"
+                      value={newSubAttribute}
+                      onChange={(e) => setNewSubAttribute(e.target.value)}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Category</label>
+                    {!showCustomCategoryInput ? (
+                      <div className="flex items-center">
+                        <select
+                          value={newSubAttributeCategory}
+                          onChange={(e) => setNewSubAttributeCategory(e.target.value)}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                        >
+                          {getUniqueCategories().map(category => (
+                            <option key={category} value={category}>{category}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => setShowCustomCategoryInput(true)}
+                          className="ml-2 bg-gray-200 p-2 rounded hover:bg-gray-300"
+                          title="Add custom category"
+                        >
+                          +
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        <input
+                          type="text"
+                          value={customCategory}
+                          onChange={(e) => setCustomCategory(e.target.value)}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                          placeholder="Enter new category"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCustomCategoryInput(false)}
+                          className="ml-2 bg-gray-200 p-2 rounded hover:bg-gray-300"
+                          title="Use existing category"
+                        >
+                          ←
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="mt-4">
+                  <button
+                    onClick={handleAddSubAttribute}
+                    disabled={!newSubAttribute}
+                    className={`px-4 py-2 rounded ${
+                      !newSubAttribute
+                        ? "bg-gray-300 cursor-not-allowed"
+                        : "bg-green-500 text-white hover:bg-green-600"
+                    }`}
                   >
                     Add
-                  </button>
-                  <button
-                    onClick={() => setShowAddSubAttributeForm(false)}
-                    className="px-3 py-1.5 border border-gray-300 text-sm rounded hover:bg-gray-100"
-                  >
-                    Cancel
                   </button>
                 </div>
               </div>
@@ -477,3 +595,5 @@ export default function EditMatrixPage() {
     </AdminRoute>
   );
 }
+
+

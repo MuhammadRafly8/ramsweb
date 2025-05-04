@@ -8,6 +8,7 @@ import { useAuth } from "../../../components/auth/authContext";
 import { matrixService, historyService } from "../../../services/api";
 import Link from 'next/link';
 import ShareMatrix from "../../../components/matrix/shareMatrix";
+import MatrixNormalization from "../../../components/matrix/matrixNormalization";
 
 export default function MatrixDetailPage() {
   // Existing state variables
@@ -34,6 +35,9 @@ export default function MatrixDetailPage() {
   // Add these state variables
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submissionComment, setSubmissionComment] = useState("");
+  
+  // Add state for normalization modal
+  const [showNormalizationModal, setShowNormalizationModal] = useState(false);
   
   const params = useParams();
   const matrixId = params.id as string;
@@ -245,6 +249,15 @@ export default function MatrixDetailPage() {
     }
   };
   
+  // Add this function to calculate group totals for Sub Total row
+  const calculateGroupTotal = (start: number, end: number, columnTotals: Record<number, number>) => {
+    let total = 0;
+    for (let i = start; i <= end; i++) {
+      total += columnTotals[i] || 0;
+    }
+    return total;
+  };
+  
   if (loading) {
     return (
       <div className="flex-grow container mx-auto p-4 text-center">
@@ -269,6 +282,22 @@ export default function MatrixDetailPage() {
     acc[row.category].push(row);
     return acc;
   }, {} as Record<string, typeof matrix.data.rows>);
+
+  // Calculate column totals for the Relation From row
+  const calculateColumnTotals = () => {
+    const columnTotals: Record<number, number> = {};
+    
+    matrix.data.columns.forEach(column => {
+      columnTotals[column.id] = matrix.data.rows.reduce((total, row) => {
+        const key = `${row.id}_${column.id}`;
+        return total + (matrix.data.dependencies[key] ? 1 : 0);
+      }, 0);
+    });
+    
+    return columnTotals;
+  };
+  
+  const columnTotalsData = calculateColumnTotals();
 
   return (
     <main className="flex-grow container mx-auto p-4">
@@ -333,11 +362,12 @@ export default function MatrixDetailPage() {
             <div className="overflow-auto flex-grow">
               <div className="min-w-max">
                 <table className="min-w-full border-collapse border border-gray-300">
+                  
                   <thead>
                     <tr className="bg-gray-100">
                       <th className="border border-gray-300 p-1 text-center">ID</th>
-                      <th className="border border-gray-300 p-1 text-left">Sub-Attribute</th>
-                      <th className="border border-gray-300 p-1 text-center">Category</th>
+                      <th className="border border-gray-300 p-1 text-center">Sub-Attribute</th>
+                      <th className="border border-gray-300 p-1 text-left">Category</th>
                       <th className="border border-gray-300 p-1 text-center">Relation To</th>
                       {selectedMatrix.columns.map((column) => (
                         <th 
@@ -440,7 +470,7 @@ export default function MatrixDetailPage() {
                                       }`}
                                       style={{ width: '20px', height: '20px', maxWidth: '30px' }}
                                     >
-                                      {value && !isDisabled ? 'x' : ''}
+                                      {value && !isDisabled ? <span className="text-white">x</span> : ''}
                                     </td>
                                   );
                                 })}
@@ -516,22 +546,43 @@ export default function MatrixDetailPage() {
         </div>
       )}
       
+      {/* Add Normalization Modal */}
+      {showNormalizationModal && matrix && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-4 w-[98vw] h-[98vh] overflow-auto">
+            <MatrixNormalization 
+              matrix={matrix.data} 
+              onClose={() => setShowNormalizationModal(false)} 
+            />
+          </div>
+        </div>
+      )}
+      
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">{matrix.title}</h2>
+          <h2 className="text-2xl font-bold">{matrix?.title}</h2>
           <div className="flex space-x-2">
             {!isAdmin() && (
-              <button
-                onClick={() => setShowSubmitModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                disabled={!isAuthorized}
-              >
-                Submit Matrix
-              </button>
+              <>
+                <button
+                  onClick={() => setShowSubmitModal(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  disabled={!isAuthorized}
+                >
+                  Submit Matrix
+                </button>
+                <button
+                  onClick={() => setShowNormalizationModal(true)}
+                  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                  disabled={!isAuthorized}
+                >
+                  Calculate Normalization
+                </button>
+              </>
             )}
             {isAdmin() && (
               <>
-              <ShareMatrix 
+                <ShareMatrix 
                   matrixId={matrixId} 
                   buttonText="Bagikan" 
                   className="bg-green-600 hover:bg-green-700" 
@@ -559,6 +610,15 @@ export default function MatrixDetailPage() {
                   </svg>
                   View Analytics
                 </Link>
+                <button
+                  onClick={() => setShowNormalizationModal(true)}
+                  className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+                  </svg>
+                  Calculate Normalization
+                </button>
               </>
             )}
           </div>
@@ -569,8 +629,8 @@ export default function MatrixDetailPage() {
             <thead>
               <tr className="bg-gray-100">
                 <th className="border border-gray-300 p-1 text-center">ID</th>
-                <th className="border border-gray-300 p-1 text-left">Sub-Attribute</th>
-                <th className="border border-gray-300 p-1 text-center">Category</th>
+                <th className="border border-gray-300 p-1 text-center">Sub-Attribute</th>
+                <th className="border border-gray-300 p-1 text-left">Category</th>
                 {matrix.data.columns.map((column) => (
                   <th key={column.id} className="border border-gray-300 p-1 text-center">
                     {column.id}
@@ -581,6 +641,7 @@ export default function MatrixDetailPage() {
               </tr>
             </thead>
             <tbody>
+              {/* Main table rows remain unchanged */}
               {Object.entries(rowsByCategory).map(([category, rows]) => (
                 <Fragment key={category}>
                   {rows.map((row, rowIndex) => (
@@ -612,7 +673,7 @@ export default function MatrixDetailPage() {
                             onClick={() => isAuthorized && !isDisabled && handleCellChange(row.id, column.id)}
                             style={{ cursor: isAuthorized && !isDisabled ? 'pointer' : 'not-allowed', width: '20px', height: '20px', maxWidth: '30px' }}
                           >
-                            {value && !isDisabled ? 'x' : ''}
+                            {value && !isDisabled ? <span className="text-white">x</span> : ''}
                           </td>
                         );
                       })}
@@ -631,9 +692,77 @@ export default function MatrixDetailPage() {
                   ))}
                 </Fragment>
               ))}
+              
+              {/* Add Relation From row */}
+              <tr className="bg-gray-100">
+                <td colSpan={3} className="border border-gray-300 p-1 text-right font-bold text-xs md:text-sm">
+                  Relation From
+                </td>
+                {matrix.data.columns.map((column) => (
+                  <td key={`relation-from-${column.id}`} className="border border-gray-300 p-1 text-center font-bold text-xs md:text-sm">
+                    {columnTotalsData[column.id] || 0}
+                  </td>
+                ))}
+                <td className="border border-gray-300 p-1"></td>
+                <td className="border border-gray-300 p-1"></td>
+              </tr>
+              
+              {/* Add Sub Total row */}
+              <tr className="bg-gray-100">
+                <td colSpan={3} className="border border-gray-300 p-1 text-right font-bold text-xs md:text-sm">
+                  Sub Total
+                </td>
+                {(() => {
+                  // Get unique categories in order they appear
+                  const categories = Object.keys(rowsByCategory);
+                  
+                  // Create a map of column IDs to their categories
+                  const columnCategories: Record<number, string> = {};
+                  matrix.data.rows.forEach(row => {
+                    columnCategories[row.id] = row.category;
+                  });
+                  
+                  // Group columns by category
+                  const columnsByCategory: Record<string, number[]> = {};
+                  categories.forEach(category => {
+                    columnsByCategory[category] = [];
+                  });
+                  
+                  matrix.data.columns.forEach(column => {
+                    const category = columnCategories[column.id];
+                    if (category && columnsByCategory[category]) {
+                      columnsByCategory[category].push(column.id);
+                    }
+                  });
+                  
+                  // Calculate subtotals for each category
+                  return categories.map(category => {
+                    const columns = columnsByCategory[category] || [];
+                    if (columns.length === 0) return null;
+                    
+                    // Calculate total dependencies for this category's columns
+                    const total = columns.reduce((sum, colId) => {
+                      return sum + (columnTotalsData[colId] || 0);
+                    }, 0);
+                    
+                    return (
+                      <td 
+                        key={`subtotal-${category}`}
+                        colSpan={columns.length}
+                        className="border border-gray-300 p-1 text-center font-bold text-xs md:text-sm"
+                      >
+                        {total}
+                      </td>
+                    );
+                  });
+                })()}
+                <td className="border border-gray-300 p-1"></td>
+                <td className="border border-gray-300 p-1"></td>
+              </tr>
             </tbody>
           </table>
         </div>
       </div>
     </main>
-  );};
+  );
+}

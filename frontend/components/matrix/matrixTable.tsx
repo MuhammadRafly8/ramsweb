@@ -412,6 +412,7 @@ const MatrixTable = () => {
 
   return (
     <div className="overflow-x-auto -mx-4 sm:mx-0">
+      {/* Admin controls section - unchanged */}
       {isAdmin() && (
         <div className="mb-4 p-4 bg-gray-50 rounded-lg shadow-sm">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
