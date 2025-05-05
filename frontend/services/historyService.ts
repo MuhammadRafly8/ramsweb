@@ -14,6 +14,8 @@ export interface HistoryEntry {
     username: string;
     role: string;
   };
+  rowName?: string;
+  columnName?: string;
 }
 
 // Add this interface for matrix submissions

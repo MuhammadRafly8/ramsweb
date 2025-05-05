@@ -3,29 +3,8 @@
 import { useState, useEffect, Fragment } from "react";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
-import historyService from "../../services/historyService";
+import historyService, { HistoryEntry } from "../../services/historyService";
 import MatrixSnapshotViewer from '../matrix/matrixSnapshotViewer';
-
-interface HistoryEntry {
-  id?: string;
-  userId: string;
-  userRole: string;
-  timestamp: string;
-  action: string;
-  matrixId: string;
-  rowId?: number;
-  columnId?: number;
-  rowName?: string;
-  columnName?: string;
-  cellKey?: string;
-  details?: string;
-  matrixSnapshot?: string;
-  adminOnly?: boolean;
-  user?: {
-    id: string;
-    username: string;
-  };
-}
 
 interface StructuredMatrix {
   rows: { id: number; name: string; category: string }[];
@@ -188,9 +167,9 @@ export default function HistoryTable({ matrixId, viewMatrix: externalViewMatrix 
                 </td>
                 <td className="border border-gray-300 p-1 md:p-2 text-xs md:text-sm">
                   <span className={`px-1 md:px-2 py-0.5 md:py-1 rounded-full text-xs ${
-                    entry.userRole === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                    entry.user?.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
                   }`}>
-                    {entry.userRole}
+                    {entry.user?.role}
                   </span>
                 </td>
                 <td className="border border-gray-300 p-1 md:p-2 text-xs md:text-sm">{entry.matrixId}</td>
