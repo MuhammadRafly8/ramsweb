@@ -7,8 +7,9 @@ import { useAuth } from "../../../../../components/auth/authContext";
 import AdminRoute from "../../../../../components/auth/adminRoute";
 import { MatrixItem, StructuredMatrix } from "../../../../../types/matrix";
 import { matrixService } from "../../../../../services/api";
+import EditCategory from '../../../../../components/matrix/editCategory';
 
-export default function EditMatrixPage() {
+export default function EditMatrixPage({ params }: { params: { id: string } }) {
   const [matrix, setMatrix] = useState<MatrixItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [rowTotals, setRowTotals] = useState<Record<number, number>>({});
@@ -21,9 +22,50 @@ export default function EditMatrixPage() {
   const [showAddSubAttributeForm, setShowAddSubAttributeForm] = useState(false);
   const [customCategory, setCustomCategory] = useState("");
   const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+  
+  // Tambahkan useEffect untuk mengambil kategori dari matrix
+  useEffect(() => {
+    if (matrix) {
+      const uniqueCategories = Array.from(
+        new Set(matrix.data.rows.map(row => row.category))
+      );
+      setCategories(uniqueCategories);
+    }
+  }, [matrix]);
+  
+  // Fungsi untuk menangani perubahan kategori
+  const handleSaveCategories = (newCategories: string[]) => {
+    // Buat salinan matrix untuk dimodifikasi
+    const updatedMatrix = { ...matrix };
+    
+    // Untuk setiap baris, jika kategorinya dihapus, atur ke kategori pertama yang tersedia
+    if (updatedMatrix && updatedMatrix.data) {
+      updatedMatrix.data.rows = updatedMatrix.data.rows.map(row => {
+        if (!newCategories.includes(row.category)) {
+          return { ...row, category: newCategories[0] || '' };
+        }
+        return row;
+      });
+      
+      // Perbarui state matrix
+      setMatrix(updatedMatrix as MatrixItem);
+      
+      // Perbarui state kategori
+      setCategories(newCategories);
+      
+      // Tutup modal
+      setShowCategoryModal(false);
+      
+      // Tampilkan pesan sukses
+      toast.success('Kategori berhasil diperbarui');
+      setHasUnsavedChanges(true);
+    }
+  };
   
   const router = useRouter();
-  const params = useParams();
+  // Gunakan params yang diterima dari parameter komponen
   const matrixId = params.id as string;
   const { isAdmin } = useAuth();
 
@@ -315,6 +357,12 @@ export default function EditMatrixPage() {
             <h2 className="text-2xl font-bold">Edit Matrix</h2>
             <div className="flex space-x-2">
               <button
+                onClick={() => setShowCategoryModal(true)}
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                Edit Kategori
+              </button>
+              <button
                 onClick={() => router.push("/admin/matrix")}
                 className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
               >
@@ -592,8 +640,17 @@ export default function EditMatrixPage() {
           </div>
         </div>
       </main>
+      
+      {/* Modal Edit Kategori */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <EditCategory
+            categories={categories}
+            onSave={handleSaveCategories}
+            onCancel={() => setShowCategoryModal(false)}
+          />
+        </div>
+      )}
     </AdminRoute>
   );
 }
-
-

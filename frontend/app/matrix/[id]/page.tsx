@@ -41,10 +41,19 @@ export default function MatrixDetailPage() {
   
   const params = useParams();
   const matrixId = params.id as string;
-  const { isAuthenticated, userId, isAdmin } = useAuth();
+  const { isAuthenticated, userId, isAdmin, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    // Jika belum login, simpan matrixId ke localStorage dan redirect ke halaman login
+    if (!isLoading && !isAuthenticated) {
+      // Simpan ID matrix yang ingin diakses ke localStorage
+      localStorage.setItem('redirectMatrixId', matrixId);
+      // Redirect ke halaman login
+      router.push('/auth/login');
+      return;
+    }
+
     // Load matrix from API instead of localStorage
     const fetchMatrix = async () => {
       try {
@@ -68,7 +77,7 @@ export default function MatrixDetailPage() {
     if (isAuthenticated) {
       fetchMatrix();
     }
-  }, [matrixId, isAdmin, userId, isAuthenticated]);
+  }, [matrixId, isAdmin, userId, isAuthenticated, isLoading, router]);
 
   const handleCellChange = async (rowId: number, colId: number) => {
     if (!matrix || !isAuthenticated || !isAuthorized) return;
