@@ -650,7 +650,6 @@ export default function MatrixNormalization({
             </div>
           )}
         </div>
-      ) : null{'}'}
     </div>
   );
 }

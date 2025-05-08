@@ -64,31 +64,20 @@ export default function AdminMatrixPage() {
     }
 
     // Create a new matrix with default structure but empty cells
+    const defaultRows = [
+      { id: 1, name: "a", category: "Technical/Ops" },
+    ];
+    
+    // Automatically create columns based on the number of rows
+    const defaultColumns = defaultRows.map(row => ({
+      id: row.id,
+      name: row.id.toString(),
+      color: "gray"
+    }));
+    
     const defaultMatrix = {
-      rows: [
-        { id: 1, name: "w", category: "Technical/Ops" },
-        { id: 2, name: "s", category: "Technical/Ops" },
-        { id: 3, name: "x", category: "Technical/Ops" },
-        { id: 4, name: "x", category: "Technical/Ops" },
-        { id: 5, name: "r", category: "Technical/Ops" },
-        { id: 6, name: "c", category: "Technical/Ops" },
-        { id: 7, name: "f", category: "wow" },
-        { id: 8, name: "wa", category: "wow" },
-        { id: 9, name: "x", category: "wow" },
-        { id: 10, name: "x", category: "wow" },
-        { id: 11, name: "d", category: "wow" },
-      ],
-      columns: [
-        { id: 1, name: "1", color: "gray" },
-        { id: 2, name: "2", color: "gray" },
-        { id: 3, name: "3", color: "gray" },
-        { id: 4, name: "4", color: "gray" },
-        { id: 5, name: "5", color: "gray" },
-        { id: 6, name: "6", color: "gray" },
-        { id: 7, name: "7", color: "gray" },
-        { id: 8, name: "8", color: "gray" },
-        { id: 9, name: "9", color: "gray" },
-      ],
+      rows: defaultRows,
+      columns: defaultColumns,
       dependencies: {},
       // Add styling configuration
       style: {

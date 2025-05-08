@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, Fragment } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useState, useEffect, Fragment, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { useAuth } from "../../../../../components/auth/authContext";
 import AdminRoute from "../../../../../components/auth/adminRoute";
@@ -25,7 +25,6 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   
-  // Tambahkan useEffect untuk mengambil kategori dari matrix
   useEffect(() => {
     if (matrix) {
       const uniqueCategories = Array.from(
@@ -35,12 +34,8 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
     }
   }, [matrix]);
   
-  // Fungsi untuk menangani perubahan kategori
   const handleSaveCategories = (newCategories: string[]) => {
-    // Buat salinan matrix untuk dimodifikasi
     const updatedMatrix = { ...matrix };
-    
-    // Untuk setiap baris, jika kategorinya dihapus, atur ke kategori pertama yang tersedia
     if (updatedMatrix && updatedMatrix.data) {
       updatedMatrix.data.rows = updatedMatrix.data.rows.map(row => {
         if (!newCategories.includes(row.category)) {
@@ -48,29 +43,19 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
         }
         return row;
       });
-      
-      // Perbarui state matrix
       setMatrix(updatedMatrix as MatrixItem);
-      
-      // Perbarui state kategori
       setCategories(newCategories);
-      
-      // Tutup modal
       setShowCategoryModal(false);
-      
-      // Tampilkan pesan sukses
       toast.success('Kategori berhasil diperbarui');
       setHasUnsavedChanges(true);
     }
   };
   
   const router = useRouter();
-  // Gunakan params yang diterima dari parameter komponen
   const matrixId = params.id as string;
   const { isAdmin } = useAuth();
 
   useEffect(() => {
-    // Load matrix from API instead of localStorage
     const fetchMatrix = async () => {
       try {
         const data = await matrixService.getMatrixById(matrixId);
@@ -85,22 +70,19 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
       }
     };
 
-    // Check if user is admin or the creator of the matrix
     if (isAdmin()) {
       fetchMatrix();
     } else {
-      // Redirect non-admin users
       router.push("/matrix");
       toast.error("You don't have permission to edit this matrix");
     }
-  }, [matrixId, router, isAdmin]);
+  }, [matrixId, router]);
 
   const calculateTotals = (data: StructuredMatrix) => {
     const rowTotals: Record<number, number> = {};
     const columnTotals: Record<number, number> = {};
     const categoryTotals: Record<string, number> = {};
 
-    // Initialize totals
     data.rows.forEach(row => {
       rowTotals[row.id] = 0;
       if (!categoryTotals[row.category]) {
@@ -112,14 +94,11 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
       columnTotals[col.id] = 0;
     });
 
-    // Calculate totals
     Object.entries(data.dependencies).forEach(([key, value]) => {
       if (value) {
         const [rowId, colId] = key.split('_').map(Number);
         rowTotals[rowId] = (rowTotals[rowId] || 0) + 1;
         columnTotals[colId] = (columnTotals[colId] || 0) + 1;
-        
-        // Find the category for this row
         const row = data.rows.find(r => r.id === rowId);
         if (row) {
           categoryTotals[row.category] = (categoryTotals[row.category] || 0) + 1;
@@ -134,10 +113,8 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
 
   const handleCellChange = (rowId: number, colId: number) => {
     if (!matrix) return;
-    
     const key = `${rowId}_${colId}`;
     const newValue = !matrix.data.dependencies[key];
-    
     const updatedMatrix = {
       ...matrix,
       data: {
@@ -148,7 +125,6 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
         }
       }
     };
-    
     setMatrix(updatedMatrix);
     calculateTotals(updatedMatrix.data);
     setHasUnsavedChanges(true);
@@ -156,7 +132,6 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
 
   const handleSubAttributeChange = (id: number, newName: string) => {
     if (!matrix) return;
-    
     const updatedMatrix = {
       ...matrix,
       data: {
@@ -166,16 +141,13 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
         )
       }
     };
-    
     setMatrix(updatedMatrix);
     setHasUnsavedChanges(true);
   };
 
   const saveChanges = async () => {
     if (!matrix) return;
-    
     try {
-      // Save to API instead of localStorage
       await matrixService.updateMatrix(matrix.id, matrix);
       setHasUnsavedChanges(false);
       toast.success("Changes saved successfully");
@@ -187,89 +159,76 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
 
   const updateMatrixInfo = (field: string, value: string) => {
     if (!matrix) return;
-    
     setMatrix({
       ...matrix,
       [field]: value
     });
-    
     setHasUnsavedChanges(true);
   };
 
-  // Get unique categories from existing rows
   const getUniqueCategories = () => {
     if (!matrix) return ["Technical/Ops", "Safety"];
-    
     const categories = new Set<string>();
     matrix.data.rows.forEach(row => {
       if (row.category) {
         categories.add(row.category);
       }
     });
-    
     return Array.from(categories);
   };
 
   const handleAddSubAttribute = () => {
     if (!matrix || !newSubAttribute) return;
-    
-    // Get all existing IDs
     const existingIds = matrix.data.rows.map(row => row.id);
-    
-    // If ID is provided and already exists, we need to shift IDs
     if (newSubAttributeId !== null) {
-      // Check if the ID already exists
       const idExists = existingIds.includes(newSubAttributeId);
-      
       if (idExists) {
-        // Create a new matrix with shifted IDs for rows with ID >= newSubAttributeId
         const updatedRows = [...matrix.data.rows].map(row => {
           if (row.id >= newSubAttributeId) {
-            // Shift ID up by 1
             return { ...row, id: row.id + 1 };
           }
           return row;
         });
-        
-        // Update dependencies to match the new IDs
+        const updatedColumns = [...matrix.data.columns].map(col => {
+          if (col.id >= newSubAttributeId) {
+            return { ...col, id: col.id + 1, name: (col.id + 1).toString() };
+          }
+          return col;
+        });
         const updatedDependencies: Record<string, boolean> = {};
         Object.entries(matrix.data.dependencies).forEach(([key, value]) => {
           const [rowId, colId] = key.split('_').map(Number);
-          
           let newRowId = rowId;
           let newColId = colId;
-          
           if (rowId >= newSubAttributeId) {
             newRowId = rowId + 1;
           }
-          
           if (colId >= newSubAttributeId) {
             newColId = colId + 1;
           }
-          
           updatedDependencies[`${newRowId}_${newColId}`] = value;
         });
-        
-        // Insert the new row at the specified position
         updatedRows.splice(newSubAttributeId - 1, 0, {
           id: newSubAttributeId,
           name: newSubAttribute,
           category: showCustomCategoryInput ? customCategory : newSubAttributeCategory
         });
-        
+        updatedColumns.splice(newSubAttributeId - 1, 0, {
+          id: newSubAttributeId,
+          name: newSubAttributeId.toString()
+        });
         const updatedMatrix = {
           ...matrix,
           data: {
             ...matrix.data,
             rows: updatedRows,
+            columns: updatedColumns,
             dependencies: updatedDependencies
           }
         };
-        
         setMatrix(updatedMatrix);
         calculateTotals(updatedMatrix.data);
       } else {
-        // ID doesn't exist, just add the new row
         const updatedMatrix = {
           ...matrix,
           data: {
@@ -281,17 +240,21 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
                 name: newSubAttribute,
                 category: showCustomCategoryInput ? customCategory : newSubAttributeCategory
               }
+            ],
+            columns: [
+              ...matrix.data.columns,
+              {
+                id: newSubAttributeId,
+                name: newSubAttributeId.toString()
+              }
             ]
           }
         };
-        
         setMatrix(updatedMatrix);
         calculateTotals(updatedMatrix.data);
       }
     } else {
-      // No ID provided, use the next available ID
       const nextId = Math.max(0, ...existingIds) + 1;
-      
       const updatedMatrix = {
         ...matrix,
         data: {
@@ -303,15 +266,19 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
               name: newSubAttribute,
               category: showCustomCategoryInput ? customCategory : newSubAttributeCategory
             }
+          ],
+          columns: [
+            ...matrix.data.columns,
+            {
+              id: nextId,
+              name: nextId.toString()
+            }
           ]
         }
       };
-      
       setMatrix(updatedMatrix);
       calculateTotals(updatedMatrix.data);
     }
-    
-    // Reset form
     setNewSubAttribute("");
     setNewSubAttributeId(null);
     setShowAddSubAttributeForm(false);
@@ -319,6 +286,17 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
     setShowCustomCategoryInput(false);
     setHasUnsavedChanges(true);
   };
+
+  const rowsByCategory = useMemo(() => {
+    if (!matrix) return {};
+    return matrix.data.rows.reduce((acc, row) => {
+      if (!acc[row.category]) {
+        acc[row.category] = [];
+      }
+      acc[row.category].push(row);
+      return acc;
+    }, {} as Record<string, typeof matrix.data.rows>);
+  }, [matrix]);
 
   if (loading) {
     return (
@@ -339,15 +317,6 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
       </AdminRoute>
     );
   }
-
-  // Group rows by category
-  const rowsByCategory = matrix.data.rows.reduce((acc, row) => {
-    if (!acc[row.category]) {
-      acc[row.category] = [];
-    }
-    acc[row.category].push(row);
-    return acc;
-  }, {} as Record<string, typeof matrix.data.rows>);
 
   return (
     <AdminRoute>
@@ -586,71 +555,79 @@ export default function EditMatrixPage({ params }: { params: { id: string } }) {
                           </td>
                         ) : null}
                         <td className="border border-gray-300 p-1 text-center">
-                          <button
-                            onClick={() => {
-                              if (confirm(`Are you sure you want to delete sub-attribute "${row.name}"?`)) {
-                                if (!matrix) return;
-                                
-                                // Remove row
-                                const updatedRows = matrix.data.rows.filter(r => r.id !== row.id);
-                                
-                                // Remove column
-                                const updatedColumns = matrix.data.columns.filter(c => c.id !== row.id);
-                                
-                                // Remove related dependencies
-                                const updatedDependencies = { ...matrix.data.dependencies };
-                                Object.keys(updatedDependencies).forEach(key => {
-                                  const [r, c] = key.split('_').map(Number);
-                                  if (r === row.id || c === row.id) {
-                                    delete updatedDependencies[key];
-                                  }
-                                });
-                                
-                                // Update matrix
-                                const updatedMatrix = {
-                                  ...matrix,
-                                  data: {
-                                    ...matrix.data,
-                                    rows: updatedRows,
-                                    columns: updatedColumns,
-                                    dependencies: updatedDependencies
-                                  }
-                                };
-                                
-                                // Update state
-                                setMatrix(updatedMatrix);
-                                calculateTotals(updatedMatrix.data);
-                                setHasUnsavedChanges(true);
-                                
-                                toast.success(`Sub-attribute "${row.name}" deleted successfully`);
-                              }
-                            }}
-                            className="px-2 py-0.5 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-                            title="Delete this sub-attribute"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </main>
-      
-      {/* Modal Edit Kategori */}
-      {showCategoryModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <EditCategory
-            categories={categories}
-            onSave={handleSaveCategories}
-            onCancel={() => setShowCategoryModal(false)}
-          />
-        </div>
-      )}
-    </AdminRoute>
-  );
-}
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Are you sure you want to delete sub-attribute "${row.name}"?`)) {
+                                    if (!matrix) return;
+
+                                    const deletedId = row.id;
+
+                                    let updatedRows = matrix.data.rows.filter(r => r.id !== deletedId);
+                                    let updatedColumns = matrix.data.columns.filter(c => c.id !== deletedId);
+
+                                    updatedRows = updatedRows.map(r => {
+                                      if (r.id > deletedId) {
+                                        return { ...r, id: r.id - 1 };
+                                      }
+                                      return r;
+                                    });
+
+                                    updatedColumns = updatedColumns.map(c => {
+                                      if (c.id > deletedId) {
+                                        return { ...c, id: c.id - 1, name: (c.id - 1).toString() };
+                                      }
+                                      return c;
+                                    });
+
+                                    const updatedDependencies: Record<string, boolean> = {};
+                                    Object.entries(matrix.data.dependencies).forEach(([key, value]) => {
+                                      const [r, c] = key.split('_').map(Number);
+                                      if (r === deletedId || c === deletedId) {
+                                        return;
+                                      }
+                                      const newRowId = r > deletedId ? r - 1 : r;
+                                      const newColId = c > deletedId ? c - 1 : c;
+                                      updatedDependencies[`${newRowId}_${newColId}`] = value;
+                                    });
+
+                                    const updatedMatrix = {
+                                      ...matrix,
+                                      data: {
+                                        ...matrix.data,
+                                        rows: updatedRows,
+                                        columns: updatedColumns,
+                                        dependencies: updatedDependencies
+                                      }
+                                    };
+
+                                    setMatrix(updatedMatrix);
+                                    calculateTotals(updatedMatrix.data);
+                                    setHasUnsavedChanges(true);
+                                  }}
+                                }
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </main>
+            
+            {showCategoryModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <EditCategory
+                  categories={categories}
+                  onSave={handleSaveCategories}
+                  onCancel={() => setShowCategoryModal(false)}
+                />
+              </div>
+            )}
+          </AdminRoute>
+        );
+      }
