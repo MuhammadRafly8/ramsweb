@@ -567,74 +567,59 @@ export default function MatrixDetailPage() {
         </div>
       )}
       
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">{matrix?.title}</h2>
-          <div className="flex space-x-2">
-            {!isAdmin() && (
-              <>
-                <button
-                  onClick={() => setShowSubmitModal(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                  disabled={!isAuthorized}
-                >
-                  Submit Matrix
-                </button>
-                <button
-                  onClick={() => setShowNormalizationModal(true)}
-                  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-                  disabled={!isAuthorized}
-                >
-                  Calculate Normalization
-                </button>
-              </>
-            )}
+      <div className="bg-white rounded-lg shadow-md p-3 md:p-6">
+        {/* Header section with title and actions */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold">{matrix.title}</h1>
+            <p className="text-sm md:text-base text-gray-600 mt-1">{matrix.description}</p>
+          </div>
+          
+          <div className="flex flex-wrap gap-2 mt-2 md:mt-0">
             {isAdmin() && (
-              <>
-                <ShareMatrix 
-                  matrixId={matrixId} 
-                  buttonText="Bagikan" 
-                  className="bg-green-600 hover:bg-green-700" 
-                />
-                <button
-                  onClick={() => setShowSubmitModal(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                  disabled={!isAuthorized}
-                >
-                  Submit Matrix
-                </button>
-                <Link 
-                  href={`/admin/matrix/submissions`}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                >
-                  All Submissions
-                </Link>
-                <Link 
-                  href={`/matrix/${matrixId}/analytics`}
-                  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 flex items-center"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
-                    <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
-                  </svg>
-                  View Analytics
-                </Link>
-                <button
-                  onClick={() => setShowNormalizationModal(true)}
-                  className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 flex items-center"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
-                  </svg>
-                  Calculate Normalization
-                </button>
-              </>
+              <Link 
+                href={`/admin/matrix/edit/${matrixId}`}
+                className="px-3 py-1 md:px-4 md:py-2 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700"
+              >
+                Edit Matrix
+              </Link>
             )}
+            
+            <Link 
+              href={`/matrix/${matrixId}/analytics`}
+              className="px-3 py-1 md:px-4 md:py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+            >
+              View Analytics
+            </Link>
+            
+            {isAdmin() && (
+              <Link 
+                href={`/matrix/${matrixId}/history`}
+                className="px-3 py-1 md:px-4 md:py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+              >
+                View History
+              </Link>
+            )}
+            
+            <button
+              onClick={() => setShowNormalizationModal(true)}
+              className="px-3 py-1 md:px-4 md:py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+            >
+              Normalize
+            </button>
+            
+            <button
+              onClick={() => setShowSubmitModal(true)}
+              className="px-3 py-1 md:px-4 md:py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
+            >
+              Submit
+            </button>
           </div>
         </div>
-
+        
+        {/* Matrix table section */}
         <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse border border-gray-300">
+          <table className="min-w-full border-collapse border border-gray-300 text-sm md:text-base">
             <thead>
               <tr className="bg-gray-100">
                 <th className="border border-gray-300 p-1 text-center">ID</th>

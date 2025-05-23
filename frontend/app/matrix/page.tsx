@@ -27,10 +27,12 @@ export default function MatrixPage() {
   }
 
   return (
-    <main className="flex-grow container mx-auto p-4">
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-2xl font-bold mb-6">Dependency Matrix</h2>
-        <MatrixTable />
+    <main className="flex-grow container mx-auto p-2 md:p-4">
+      <div className="bg-white rounded-lg shadow-md p-3 md:p-6">
+        <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Dependency Matrix</h2>
+        <div className="overflow-x-auto">
+          <MatrixTable />
+        </div>
       </div>
     </main>
   );

@@ -28,13 +28,15 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
       </head>
-      <body className="min-h-screen flex flex-col">
+      <body className="flex flex-col min-h-screen bg-gray-100">
+        <ToastContainer position="top-right" autoClose={3000} />
         <AuthProvider>
-          <Navbar />
-          <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            {children}
-          </main>
-          <ToastContainer position="top-right" autoClose={3000} />
+          <div className="flex flex-col flex-grow">
+            <Navbar />
+            <div className="flex-grow">
+              {children}
+            </div>
+          </div>
         </AuthProvider>
       </body>
     </html>

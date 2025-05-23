@@ -245,13 +245,13 @@ export default function MatrixAnalyticsPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">{matrixTitle}</h1>
+    <div className="container mx-auto p-2 md:p-4">
+      <div className="bg-white rounded-lg shadow-md p-3 md:p-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6">
+          <h1 className="text-xl md:text-2xl font-bold">{matrixTitle}</h1>
           <Link 
             href={`/matrix/${matrixId}`}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="mt-2 md:mt-0 px-3 py-1 md:px-4 md:py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
           >
             Back to Matrix
           </Link>
@@ -262,16 +262,16 @@ export default function MatrixAnalyticsPage() {
             No analytics data available for this matrix
           </div>
         ) : (
-          <div className="mt-6 grid grid-cols-1 gap-8">
-            <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
-              <div className="h-[50vh]">
+          <div className="mt-4 md:mt-6 grid grid-cols-1 gap-4 md:gap-8">
+            <div className="bg-gray-50 p-3 md:p-6 rounded-lg shadow-sm">
+              <div className="h-[40vh] md:h-[50vh]">
                 <Bar data={barChartData} options={barChartOptions} />
               </div>
             </div>
 
             {timelineData && historyData.length > 1 && (
-              <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
-                <div className="h-[50vh]">
+              <div className="bg-gray-50 p-3 md:p-6 rounded-lg shadow-sm">
+                <div className="h-[40vh] md:h-[50vh]">
                   <Line data={timelineData} options={timelineChartOptions} />
                 </div>
               </div>

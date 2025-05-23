@@ -154,13 +154,13 @@ export default function AdminMatrixPage() {
   
   return (
     // Remove AdminRoute temporarily to test
-    <main className="flex-grow container mx-auto p-4">
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Matrix Management</h2>
+    <main className="flex-grow container mx-auto p-2 md:p-4">
+      <div className="bg-white rounded-lg shadow-md p-3 md:p-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6">
+          <h2 className="text-xl md:text-2xl font-bold mb-2 md:mb-0">Matrix Management</h2>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            className="px-3 py-1 md:px-4 md:py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
           >
             Create New Matrix
           </button>
@@ -174,13 +174,13 @@ export default function AdminMatrixPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse border border-gray-300">
+            <table className="min-w-full border-collapse border border-gray-300 text-sm md:text-base">
               <thead>
                 <tr className="bg-gray-100">
                   <th className="border border-gray-300 p-2 text-left">Title</th>
-                  <th className="border border-gray-300 p-2 text-left">Description</th>
+                  <th className="border border-gray-300 p-2 text-left hidden md:table-cell">Description</th>
                   <th className="border border-gray-300 p-2 text-left">Keyword</th>
-                  <th className="border border-gray-300 p-2 text-left">Created</th>
+                  <th className="border border-gray-300 p-2 text-left hidden md:table-cell">Created</th>
                   <th className="border border-gray-300 p-2 text-center">Actions</th>
                 </tr>
               </thead>
@@ -188,46 +188,44 @@ export default function AdminMatrixPage() {
                 {matrices.map((matrix) => (
                   <tr key={matrix.id}>
                     <td className="border border-gray-300 p-2">{matrix.title}</td>
-                    <td className="border border-gray-300 p-2">{matrix.description}</td>
+                    <td className="border border-gray-300 p-2 hidden md:table-cell">{matrix.description}</td>
                     <td className="border border-gray-300 p-2">{matrix.keyword}</td>
-                    <td className="border border-gray-300 p-2">
+                    <td className="border border-gray-300 p-2 hidden md:table-cell">
                       {new Date(matrix.createdAt).toLocaleDateString()}
                     </td>
                     <td className="border border-gray-300 p-2">
-                      <div className="flex justify-center space-x-2">
+                      <div className="flex flex-wrap justify-center gap-1">
                         <button
                           onClick={() => viewMatrix(matrix.id)}
-                          className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                          className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 mb-1 md:mb-0"
                           title="View this matrix"
                         >
                           View
                         </button>
                         <button
                           onClick={() => editMatrix(matrix.id)}
-                          className="px-2 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700"
+                          className="px-2 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700 mb-1 md:mb-0"
                           title="Edit this matrix"
                         >
                           Edit
                         </button>
-                        {/* Add History button */}
                         <button
                           onClick={() => viewMatrixHistory(matrix.id)}
-                          className="px-2 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+                          className="px-2 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 mb-1 md:mb-0"
                           title="View submission history"
                         >
                           History
                         </button>
-                        {/* Replace the Share button with ShareMatrix component */}
                         <ShareMatrix
                           matrixId={matrix.id}
                           keyword={matrix.keyword}
                           showKeyword={true}
                           buttonText="Share"
-                          className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                          className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 mb-1 md:mb-0"
                         />
                         <button
                           onClick={() => handleDeleteMatrix(matrix.id)}
-                          className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                          className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 mb-1 md:mb-0"
                           title="Delete this matrix"
                         >
                           Delete

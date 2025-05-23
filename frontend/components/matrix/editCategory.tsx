@@ -48,10 +48,10 @@ export default function EditCategory({ categories, onSave, onCancel }: EditCateg
   };
 
   return (
-    <div className="bg-white rounded-lg p-6 w-full max-w-md">
-      <h3 className="text-xl font-bold mb-4">Edit Kategori</h3>
+    <div className="bg-white rounded-lg p-3 md:p-6 w-full max-w-md">
+      <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4">Edit Kategori</h3>
       
-      <div className="mb-4">
+      <div className="mb-3 md:mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Kategori Saat Ini
         </label>
@@ -62,11 +62,11 @@ export default function EditCategory({ categories, onSave, onCancel }: EditCateg
                 type="text"
                 value={category}
                 onChange={(e) => handleEditCategory(index, e.target.value)}
-                className="flex-grow p-2 border border-gray-300 rounded"
+                className="flex-grow p-2 border border-gray-300 rounded text-sm md:text-base"
               />
               <button
                 onClick={() => handleRemoveCategory(index)}
-                className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs md:text-sm"
                 title="Hapus kategori"
               >
                 Hapus
@@ -76,7 +76,7 @@ export default function EditCategory({ categories, onSave, onCancel }: EditCateg
         </div>
       </div>
       
-      <div className="mb-4">
+      <div className="mb-3 md:mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Tambah Kategori Baru
         </label>
@@ -85,28 +85,28 @@ export default function EditCategory({ categories, onSave, onCancel }: EditCateg
             type="text"
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
-            className="flex-grow p-2 border border-gray-300 rounded"
+            className="flex-grow p-2 border border-gray-300 rounded text-sm md:text-base"
             placeholder="Nama kategori baru"
           />
           <button
             onClick={handleAddCategory}
-            className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+            className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs md:text-sm"
           >
             Tambah
           </button>
         </div>
       </div>
       
-      <div className="flex justify-end space-x-2 mt-6">
+      <div className="flex justify-end space-x-2 mt-4 md:mt-6">
         <button
           onClick={onCancel}
-          className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+          className="px-3 py-1 md:px-4 md:py-2 border border-gray-300 rounded hover:bg-gray-100 text-sm md:text-base"
         >
           Batal
         </button>
         <button
           onClick={handleSave}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-3 py-1 md:px-4 md:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm md:text-base"
         >
           Simpan
         </button>

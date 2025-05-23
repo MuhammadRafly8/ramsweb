@@ -340,35 +340,51 @@ export default function MatrixNormalization({
   }, [selectedCategory, matrix, minValue, maxValue, newMinValue, newMaxValue, aggregatedDependencies]);
 
   return (
-    <div className="bg-white rounded-lg p-6 w-full max-w-4xl mx-auto shadow-lg">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold">
-          Matrix Normalization Results 
-          {submissions.length > 0 && (
-            <span className="text-sm ml-2 text-gray-600">
-              (Based on {submissionCount} submissions)
-            </span>
-          )}
-        </h3>
+    <div className="bg-white rounded-lg p-3 md:p-6 max-w-full">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+        <h2 className="text-lg md:text-xl font-bold">Matrix Normalization</h2>
         {onClose && (
           <button 
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="mt-2 md:mt-0 px-3 py-1 md:px-4 md:py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
           >
-            <span className="text-2xl">&times;</span>
+            Close
           </button>
         )}
       </div>
       
-      {/* Data Collection Progress */}
+      {/* Statistics Section */}
+      <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+        <h3 className="text-md md:text-lg font-semibold mb-2">Data Statistics</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-4">
+          <div className="bg-white p-2 rounded shadow-sm">
+            <p className="text-sm text-gray-500">Total Dependencies</p>
+            <p className="text-lg font-bold">{dataStats.totalRelationships}</p>
+          </div>
+          <div className="bg-white p-2 rounded shadow-sm">
+            <p className="text-sm text-gray-500">Filled Cells</p>
+            <p className="text-lg font-bold">{dataStats.filledRelationships} / {dataStats.maxPossibleRelationships}</p>
+            <p className="text-xs text-gray-400">({dataStats.percentageFilled.toFixed(1)}%)</p>
+          </div>
+          <div className="bg-white p-2 rounded shadow-sm">
+            <p className="text-sm text-gray-500">Submissions</p>
+            <p className="text-lg font-bold">{submissionCount} / {minSubmissionsRequired}</p>
+            <div className="w-full bg-gray-200 rounded-full h-2.5 mt-1">
+              <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${dataStats.submissionProgress}%` }}></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Rest of the component with responsive adjustments */}
       <div className="mb-6 bg-blue-50 p-4 rounded-lg">
         <h4 className="text-lg font-semibold mb-2">Data Collection Progress</h4>
         <div className="mb-2">
           <div className="flex justify-between mb-1">
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-xs font-medium text-gray-700">
               Submissions: {submissionCount}
             </span>
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-xs font-medium text-gray-700">
               {submissionCount > 0 ? '100%' : '0%'}
             </span>
           </div>
@@ -383,20 +399,20 @@ export default function MatrixNormalization({
         {/* Display data statistics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white p-3 rounded shadow">
-            <div className="text-sm text-gray-600">Total Submissions</div>
+            <div className="text-xs text-gray-600">Total Submissions</div>
             <div className="text-2xl font-bold text-blue-600">{submissionCount}</div>
           </div>
           <div className="bg-white p-3 rounded shadow">
-            <div className="text-sm text-gray-600">Filled Relationships</div>
+            <div className="text-xs text-gray-600">Filled Relationships</div>
             <div className="text-2xl font-bold text-green-600">{dataStats.filledRelationships}</div>
             <div className="text-xs text-gray-500">of {dataStats.maxPossibleRelationships} possible</div>
           </div>
           <div className="bg-white p-3 rounded shadow">
-            <div className="text-sm text-gray-600">Total Relationships</div>
+            <div className="text-xs text-gray-600">Total Relationships</div>
             <div className="text-2xl font-bold text-purple-600">{dataStats.totalRelationships}</div>
           </div>
           <div className="bg-white p-3 rounded shadow">
-            <div className="text-sm text-gray-600">Coverage</div>
+            <div className="text-xs text-gray-600">Coverage</div>
             <div className="text-2xl font-bold text-orange-600">{dataStats.percentageFilled.toFixed(1)}%</div>
           </div>
         </div>
@@ -408,47 +424,47 @@ export default function MatrixNormalization({
           <h4 className="text-lg font-semibold mb-2">Normalization Parameters</h4>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                   Original Min Value
                 </label>
                 <input
                   type="number"
                   value={minValue}
                   onChange={(e) => setMinValue(Number(e.target.value))}
-                  className="w-full p-2 border border-gray-300 rounded"
+                  className="w-full p-1 md:p-2 border border-gray-300 rounded text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                   Original Max Value
                 </label>
                 <input
                   type="number"
                   value={maxValue}
                   onChange={(e) => setMaxValue(Number(e.target.value))}
-                  className="w-full p-2 border border-gray-300 rounded"
+                  className="w-full p-1 md:p-2 border border-gray-300 rounded text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                   New Min Value
                 </label>
                 <input
                   type="number"
                   value={newMinValue}
                   onChange={(e) => setNewMinValue(Number(e.target.value))}
-                  className="w-full p-2 border border-gray-300 rounded"
+                  className="w-full p-1 md:p-2 border border-gray-300 rounded text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                   New Max Value
                 </label>
                 <input
                   type="number"
                   value={newMaxValue}
                   onChange={(e) => setNewMaxValue(Number(e.target.value))}
-                  className="w-full p-2 border border-gray-300 rounded"
+                  className="w-full p-1 md:p-2 border border-gray-300 rounded text-sm"
                 />
               </div>
             </div>
@@ -549,7 +565,7 @@ export default function MatrixNormalization({
             </div>
           </div>
           
-          {/* Sub-Attribute Normalization */}
+          {/* Sub-attribute Normalization */}
           <div className="mb-6">
             <h4 className="text-lg font-semibold mb-2">Sub-Attribute Normalization for: 
               <span className="ml-2 text-blue-600">{selectedCategory}</span>
