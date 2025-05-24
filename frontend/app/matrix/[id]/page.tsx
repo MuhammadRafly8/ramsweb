@@ -43,6 +43,11 @@ export default function MatrixDetailPage() {
   const { isAuthenticated, userId, isAdmin, isLoading } = useAuth();
   const router = useRouter();
 
+  // New state variables for submissions
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [allSubmissions, setAllSubmissions] = useState<any[]>([]);
+  const [loadingAllSubmissions, setLoadingAllSubmissions] = useState(false);
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       localStorage.setItem('redirectMatrixId', matrixId);
@@ -256,6 +261,19 @@ export default function MatrixDetailPage() {
       total += columnTotals[i] || 0;
     }
     return total;
+  };
+  
+  const fetchAllSubmissions = async () => {
+    setLoadingAllSubmissions(true);
+    try {
+      const all = await historyService.getSubmissionsByMatrixId(matrixId);
+      setAllSubmissions(all);
+      setShowNormalizationModal(true);
+    } catch (error) {
+      toast.error("Failed to load all submissions");
+    } finally {
+      setLoadingAllSubmissions(false);
+    }
   };
   
   if (loading) {
@@ -550,9 +568,13 @@ export default function MatrixDetailPage() {
       {showNormalizationModal && matrix && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
           <div className="bg-white rounded-lg p-4 w-[98vw] h-[98vh] overflow-auto">
-            <MatrixNormalization 
-              matrix={matrix.data} 
-              onClose={() => setShowNormalizationModal(false)} 
+            <MatrixNormalization
+              matrix={matrix.data}
+              submissions={allSubmissions.length > 0 ? allSubmissions : undefined}
+              onClose={() => {
+                setShowNormalizationModal(false);
+                setAllSubmissions([]);
+              }}
             />
           </div>
         </div>
@@ -598,6 +620,14 @@ export default function MatrixDetailPage() {
             >
               Normalize
             </button>
+
+            {/* Tambahkan tombol ini */}
+            <Link
+              href="/admin/matrix/submissions"
+              className="px-3 py-1 md:px-4 md:py-2 bg-green-800 text-white text-sm rounded hover:bg-green-900"
+            >
+              Normalize All Submission
+            </Link>
             
             <button
               onClick={() => setShowSubmitModal(true)}

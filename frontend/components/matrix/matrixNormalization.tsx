@@ -368,9 +368,9 @@ export default function MatrixNormalization({
           </div>
           <div className="bg-white p-2 rounded shadow-sm">
             <p className="text-sm text-gray-500">Submissions</p>
-            <p className="text-lg font-bold">{submissionCount} / {minSubmissionsRequired}</p>
+            <p className="text-lg font-bold">{submissionCount}</p>
             <div className="w-full bg-gray-200 rounded-full h-2.5 mt-1">
-              <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${dataStats.submissionProgress}%` }}></div>
+              <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: submissionCount > 0 ? '100%' : '0%' }}></div>
             </div>
           </div>
         </div>
@@ -534,28 +534,27 @@ export default function MatrixNormalization({
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.keys(rowsByCategory).map((rowCategory) => (
+                  {Object.keys(rowsByCategory).map((rowCategory, rowIdx) => (
                     <tr key={rowCategory}>
                       <td className="border border-gray-300 p-2 font-medium">{rowCategory}</td>
-                      {Object.keys(rowsByCategory).map((colCategory) => {
-                        // For the diagonal, show empty cell
-                        if (rowCategory === colCategory) {
-                          return <td key={colCategory} className="border border-gray-300 p-2 text-center bg-gray-100">-</td>;
+                      {Object.keys(rowsByCategory).map((colCategory, colIdx) => {
+                        // Hanya tampilkan angka di atas diagonal utama
+                        if (rowIdx < colIdx) {
+                          const rowValue = normalizedData[rowCategory] || 0;
+                          const colValue = normalizedData[colCategory] || 0;
+                          const comparisonValue = colValue > 0 ? Number((rowValue / colValue).toFixed(2)) : 0;
+                          return (
+                            <td 
+                              key={colCategory} 
+                              className="border border-gray-300 p-2 text-center"
+                            >
+                              {comparisonValue.toFixed(2)}
+                            </td>
+                          );
                         }
-                        
-                        // Calculate comparison between row category and column category
-                        const rowValue = normalizedData[rowCategory] || 0;
-                        const colValue = normalizedData[colCategory] || 0;
-                        
-                        const comparisonValue = colValue > 0 ? Number((rowValue / colValue).toFixed(2)) : 0;
-                        
+                        // Diagonal dan bawah diagonal tampilkan '-'
                         return (
-                          <td 
-                            key={colCategory} 
-                            className="border border-gray-300 p-2 text-center"
-                          >
-                            {rowCategory > colCategory ? comparisonValue.toFixed(2) : '-'}
-                          </td>
+                          <td key={colCategory} className="border border-gray-300 p-2 text-center bg-gray-100">-</td>
                         );
                       })}
                     </tr>
