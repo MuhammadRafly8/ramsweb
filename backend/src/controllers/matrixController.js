@@ -1,4 +1,4 @@
-const { Matrix, User, History } = require('../models');
+const { Matrix, User, History, UserMatrix } = require('../models');
 const { Op } = require('sequelize');
 
 // Get all matrices (admin only)
@@ -100,11 +100,6 @@ async function createMatrix(req, res) {
   }
 }
 
-// Remove this duplicate import
-// const { User, History } = require('../models');
-// const Matrix = require('../models/matrix');
-
-// Update matrix
 async function updateMatrix(req, res) {
   try {
     const { id } = req.params;
@@ -117,8 +112,6 @@ async function updateMatrix(req, res) {
       return res.status(404).json({ error: 'Matrix not found' });
     }
     
-    // Check if user is authorized to update this matrix
-    // Allow both admin and users with the correct keyword
     const isAdmin = req.user.role === 'admin';
     const isCreator = matrix.createdBy === req.user.id;
     const hasCorrectKeyword = updates.keyword === matrix.keyword;
@@ -316,6 +309,68 @@ async function getMatrixColumnAverages(req, res) {
   }
 }
 
+// GET /api/user-matrix/:matrixId
+exports.getUserMatrix = async (req, res) => {
+  const userId = req.user.id;
+  const { matrixId } = req.params;
+
+  // Cek apakah user sudah punya matrix ini
+  let userMatrix = await UserMatrix.findOne({ where: { userId, matrixId } });
+
+  if (!userMatrix) {
+    // Ambil struktur matrix global
+    const matrix = await Matrix.findByPk(matrixId);
+    if (!matrix) return res.status(404).json({ error: 'Matrix not found' });
+
+    // Buat salinan kosong untuk user
+    userMatrix = await UserMatrix.create({
+      userId,
+      matrixId,
+      data: {
+        rows: matrix.data.rows,
+        columns: matrix.data.columns,
+        dependencies: {}, // kosong
+      },
+    });
+  }
+
+  res.json(userMatrix.data);
+};
+
+
+exports.updateUserMatrix = async (req, res) => {
+  const userId = req.user.id;
+  const { matrixId } = req.params;
+  const { data } = req.body;
+
+  let userMatrix = await UserMatrix.findOne({ where: { userId, matrixId } });
+  if (!userMatrix) return res.status(404).json({ error: 'User matrix not found' });
+
+  userMatrix.data = data;
+  await userMatrix.save();
+
+  res.json({ message: 'Matrix updated', data: userMatrix.data });
+};
+
+exports.createUserMatrix = async (req, res) => {
+  try {
+    const userId = req.user.id; // dari middleware authenticate
+    const matrixId = req.params.matrixId;
+
+    // Cek apakah sudah ada entry
+    const existing = await UserMatrix.findOne({ where: { userId, matrixId } });
+    if (existing) {
+      return res.status(200).json({ message: "Already exists" });
+    }
+
+    // Buat entry baru
+    const userMatrix = await UserMatrix.create({ userId, matrixId });
+    res.status(201).json(userMatrix);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   getAllMatrices,
   getUserMatrices,
@@ -324,5 +379,8 @@ module.exports = {
   updateMatrix,
   deleteMatrix,
   verifyMatrixAccess,
-  getMatrixColumnAverages 
+  getMatrixColumnAverages,
+  getUserMatrix: exports.getUserMatrix,
+  updateUserMatrix: exports.updateUserMatrix,
+  createUserMatrix: exports.createUserMatrix 
 };

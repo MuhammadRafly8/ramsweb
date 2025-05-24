@@ -5,9 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { MatrixItem, StructuredMatrix } from "../../../types/matrix";
 import { useAuth } from "../../../components/auth/authContext";
-import { matrixService, historyService } from "../../../services/api";
+import { matrixService, historyService, userMatrixService } from "../../../services/api";
 import Link from 'next/link';
-import ShareMatrix from "../../../components/matrix/shareMatrix";
 import MatrixNormalization from "../../../components/matrix/matrixNormalization";
 
 export default function MatrixDetailPage() {
@@ -45,24 +44,31 @@ export default function MatrixDetailPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Jika belum login, simpan matrixId ke localStorage dan redirect ke halaman login
     if (!isLoading && !isAuthenticated) {
-      // Simpan ID matrix yang ingin diakses ke localStorage
       localStorage.setItem('redirectMatrixId', matrixId);
-      // Redirect ke halaman login
       router.push('/auth/login');
       return;
     }
 
-    // Load matrix from API instead of localStorage
     const fetchMatrix = async () => {
       try {
+        // Ambil matrix global dulu untuk meta-data
         const data = await matrixService.getMatrixById(matrixId);
-        setMatrix(data);
-        calculateTotals(data.data);
-        
-        // Check if user is admin or already authorized via backend
-        if (isAdmin() || data.createdBy === userId || data.authorized === true) {
+
+        // Jika admin atau creator, tampilkan matrix global
+        if (isAdmin() || data.createdBy === userId) {
+          setMatrix(data);
+          calculateTotals(data.data);
+          setIsAuthorized(true);
+          setShowKeywordModal(false);
+        } else {
+          // Untuk user biasa, ambil user-matrix (akan kosong jika baru pertama)
+          const userMatrix = await userMatrixService.getUserMatrix(matrixId, userId ?? "", false);
+          setMatrix({
+            ...data,
+            data: userMatrix // rows, columns, dependencies kosong jika baru
+          });
+          calculateTotals(userMatrix);
           setIsAuthorized(true);
           setShowKeywordModal(false);
         }
@@ -81,51 +87,29 @@ export default function MatrixDetailPage() {
 
   const handleCellChange = async (rowId: number, colId: number) => {
     if (!matrix || !isAuthenticated || !isAuthorized) return;
-    
     const key = `${rowId}_${colId}`;
     const newValue = !matrix.data.dependencies[key];
-    
+
     try {
-      // Create a copy of the matrix to update
-      const updatedMatrix = {
-        ...matrix,
-        data: {
-          ...matrix.data,
-          dependencies: {
-            ...matrix.data.dependencies,
-            [key]: newValue
-          }
+      const updatedData = {
+        ...matrix.data,
+        dependencies: {
+          ...matrix.data.dependencies,
+          [key]: newValue
         }
       };
-      
-      // Update local state for better UX
-      setMatrix(updatedMatrix);
-      calculateTotals(updatedMatrix.data);
-      
-      // Send only the necessary data to the backend
-      const updatePayload = {
-        title: matrix.title,
-        description: matrix.description,
-        keyword: matrix.keyword,
-        data: updatedMatrix.data
-      };
-      
-      // Save changes to API
-      await matrixService.updateMatrix(matrixId, updatePayload);
-      
-      // We're removing the history entry creation for regular cell changes
-      // This way only submissions will appear in history
-      
+      setMatrix({ ...matrix, data: updatedData });
+      calculateTotals(updatedData);
+
+      // Update ke user-matrix, bukan global matrix
+      await userMatrixService.getUserMatrix(matrixId, userId ?? "", true);
+      // Baru lakukan update
+      await userMatrixService.updateUserMatrix(matrixId, updatedData);
+
       toast.success(newValue ? "Dependency added" : "Dependency removed");
     } catch (error) {
-      console.error("Error updating matrix:", error);
+      console.error("Error updating user matrix:", error);
       toast.error("Failed to update matrix");
-      
-      // If there's an error, revert to the original matrix
-      if (matrix) {
-        setMatrix({...matrix});
-        calculateTotals(matrix.data);
-      }
     }
   };
 
@@ -168,22 +152,29 @@ export default function MatrixDetailPage() {
 
   const verifyKeyword = async () => {
     if (!matrix) return;
-    
     setKeywordError("");
-    
     if (!keyword.trim()) {
       setKeywordError("Keyword is required");
       return;
     }
-    
     try {
-      // Verify keyword through backend API
       const response = await matrixService.verifyMatrixAccess(matrixId, keyword);
-      
       if (response.authorized) {
         setIsAuthorized(true);
         setShowKeywordModal(false);
         toast.success("Access granted!");
+
+        // Ambil matrix user setelah akses berhasil
+        try {
+          const userMatrix = await matrixService.createUserMatrix(matrixId, userId ?? "");
+          setMatrix({
+            ...matrix,
+            data: userMatrix // data user-matrix (rows, columns, dependencies)
+          });
+          calculateTotals(userMatrix);
+        } catch (err) {
+          console.error("Failed to fetch user matrix:", err);
+        }
       } else {
         setKeywordError("Invalid keyword. Please try again.");
       }

@@ -1,10 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const matrixController = require('../controllers/matrixController');
-// Remove this line since we're importing the specific functions below
-// const authMiddleware = require('../middleware/authMiddleware');
-// Import the specific middleware functions
 const { authenticate, isAdmin } = require('../middleware/authMiddleware');
+const matrixController = require('../controllers/matrixController');
 
 // Verify matrix access with keyword (no authentication required)
 // This route needs to be before the authenticate middleware
@@ -33,5 +30,10 @@ router.delete('/:id', matrixController.deleteMatrix);
 
 // Add this new route - use authenticate instead of authMiddleware
 router.get('/:matrixId/column-averages', matrixController.getMatrixColumnAverages);
+
+// New routes for user-specific matrix access
+router.get('/user-matrix/:matrixId', matrixController.getUserMatrix);
+router.put('/user-matrix/:matrixId', matrixController.updateUserMatrix);
+router.post('/user-matrix/:matrixId', matrixController.createUserMatrix);
 
 module.exports = router;

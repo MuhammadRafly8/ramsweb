@@ -108,6 +108,15 @@ const matrixService = {
       console.error('Error fetching matrix column averages:', error);
       throw error;
     }
+  },
+
+  // Tambahkan fungsi ini di services/api.ts
+  createUserMatrix: async (matrixId: string, userId: string) => {
+    return fetch(`/api/usermatrix`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matrixId, userId }),
+    }).then(res => res.json());
   }
 };
 
@@ -181,7 +190,28 @@ const userService = {
   }
 };
 
-// Export all services
+// Tambahkan tipe data untuk user matrix
+export interface UserMatrixData {
+  rows: unknown[]; // Ganti unknown[] dengan tipe yang sesuai jika ada
+  columns: unknown[]; // Ganti unknown[] dengan tipe yang sesuai jika ada
+  dependencies: Record<string, boolean>;
+}
+
+
+export const userMatrixService = {
+  getUserMatrix: async (matrixId: string, userId: string, userMatrix: any) => {
+    const response = await axios.get(`${API_URL}/api/matrix/user-matrix/${matrixId}`);
+    return response.data;
+  },
+  updateUserMatrix: async (
+    matrixId: string,
+    data: UserMatrixData
+  ) => {
+    const response = await axios.put(`${API_URL}/api/matrix/user-matrix/${matrixId}`, { data });
+    return response.data;
+  }
+};
+
 export {
   authService,
   matrixService,
