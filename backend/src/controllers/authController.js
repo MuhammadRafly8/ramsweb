@@ -1,4 +1,4 @@
-const { User } = require('../models');
+const { User, History } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
@@ -263,30 +263,26 @@ exports.createUser = async (req, res) => {
 // Delete user (admin only)
 exports.deleteUser = async (req, res) => {
   try {
-    // Check if requester is admin
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Forbidden: Admin access required' });
     }
 
     const { id } = req.params;
-    
-    // Find user
     const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
-    // Prevent deleting yourself
     if (user.id === req.user.id) {
       return res.status(400).json({ error: 'You cannot delete your own account' });
     }
-    
-    // Delete user
+
+    // Hapus semua history milik user ini
+    await History.destroy({ where: { userId: id } });
+
+    // Baru hapus user
     await user.destroy();
-    
-    return res.status(200).json({ 
-      message: 'User deleted successfully' 
-    });
+
+    return res.status(200).json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Error deleting user:', error);
     return res.status(500).json({ error: 'Failed to delete user' });

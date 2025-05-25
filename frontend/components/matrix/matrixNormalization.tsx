@@ -232,7 +232,7 @@ export default function MatrixNormalization({
     const categoryTotals = calculateCategoryTotals(rowTotals);
     const subtotals = calculateCategorySubtotals();
     setCategorySubtotals(subtotals);
-    
+
     // Calculate category weights using category total + subtotal
     const weights: Record<string, number> = {};
     Object.entries(rowsByCategory).forEach(([category, rows]) => {
@@ -240,29 +240,36 @@ export default function MatrixNormalization({
       const total = categoryTotals[category] + (subtotals[category] || 0);
       weights[category] = total / rows.length;
     });
-    
-    // Apply min-max normalization formula
+
+    // Apply min-max normalization formula (range 1-9)
     const normalized: Record<string, number> = {};
+    const weightValues = Object.values(weights);
+    const minWeight = Math.min(...weightValues);
+    const maxWeight = Math.max(...weightValues);
+
     Object.entries(weights).forEach(([category, value]) => {
-      // Apply the formula: new_data = ((current_data - min) * (new_max - new_min) / (max - min)) + new_min
-      normalized[category] = ((value - minValue) * (newMaxValue - newMinValue) / (maxValue - minValue)) + newMinValue;
+      if (maxWeight === minWeight) {
+        normalized[category] = 1; // Jika semua sama, set ke 1
+      } else {
+        normalized[category] = ((value - minWeight) * (9 - 1) / (maxWeight - minWeight)) + 1;
+      }
     });
-    
+
     // Calculate comparison values (relative importance)
     const comparison: Record<string, number> = {};
-    
-    // Find the minimum normalized value
-    const minNormalized = Math.min(...Object.values(normalized));
-    
-    // Calculate the ratio for each category compared to the minimum value
+
+    // Find the maximum normalized value
+    const maxNormalized = Math.max(...Object.values(normalized));
+
+    // Calculate the ratio for each category compared to the maximum value
     Object.entries(normalized).forEach(([category, value]) => {
-      comparison[category] = Number((value / minNormalized).toFixed(2));
+      comparison[category] = Number((value / maxNormalized).toFixed(2));
     });
-    
+
     setCategoryWeights(weights);
     setNormalizedData(normalized);
     setComparisonValues(comparison);
-    
+
     // Set the first category as selected by default if none is selected
     if (!selectedCategory && Object.keys(rowsByCategory).length > 0) {
       setSelectedCategory(Object.keys(rowsByCategory)[0]);
@@ -546,7 +553,9 @@ export default function MatrixNormalization({
                           return (
                             <td 
                               key={colCategory} 
-                              className="border border-gray-300 p-2 text-center"
+                              className={`border border-gray-300 p-2 text-center ${
+                                comparisonValue > 1 ? 'text-green-600' : 'text-black'
+                              }`}
                             >
                               {comparisonValue.toFixed(2)}
                             </td>

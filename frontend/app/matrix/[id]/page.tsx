@@ -536,14 +536,14 @@ export default function MatrixDetailPage() {
             </p>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Comments (optional)
+                Comments (required)
               </label>
               <textarea
                 className="w-full border border-gray-300 rounded p-2"
                 rows={3}
                 value={submissionComment}
                 onChange={(e) => setSubmissionComment(e.target.value)}
-                placeholder="Add any comments about your submission..."
+                placeholder="tulis intsansi dan nama anda"
               />
             </div>
             <div className="flex justify-end space-x-2">
