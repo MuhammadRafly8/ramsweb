@@ -44,6 +44,10 @@ const Navbar = () => {
                 </>
               )}
               
+              <Link href="/ahpRams" className="px-4 py-2 hover:bg-gray-100 rounded">
+                ahpRams
+              </Link>
+              
               <button 
                 onClick={logout}
                 className="inline-flex items-center px-3 py-1 ml-2 bg-red-600 text-white rounded hover:bg-red-700"
@@ -93,6 +97,10 @@ const Navbar = () => {
                   </Link>
                 </>
               )}
+              
+              <Link href="/ahpRams" className="block px-3 py-2 text-base font-medium hover:bg-green-700 rounded-md">
+                ahpRams
+              </Link>
               
               <button 
                 onClick={logout}

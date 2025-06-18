@@ -5,6 +5,7 @@ const { sequelize } = require('./models');
 const matrixRoutes = require('./routes/matrixRoutes');
 const authRoutes = require('./routes/authRoutes');
 const historyRoutes = require('./routes/historyRoutes');
+const ahpTreeRoutes = require('./routes/ahpTreeRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/matrix', matrixRoutes);
 app.use('/api/history', historyRoutes);
+app.use('/api/ahp-tree', ahpTreeRoutes);
 
 // Global error handling middleware
 app.use((err, req, res, next) => {
