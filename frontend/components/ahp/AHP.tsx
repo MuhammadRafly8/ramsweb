@@ -174,11 +174,21 @@ function renderNode(
   );
 }
 
-export default function AHPExpertChoiceTree() {
-  const [tree, setTree] = useState<AHPNode | null>(null);
-  const [title, setTitle] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
+interface AHPExpertChoiceTreeProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tree: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setTree?: (tree: any) => void;
+  title?: string;
+  setTitle?: (title: string) => void;
+  onSave?: () => void;
+  saving?: boolean;
+  message?: string;
+  readOnly?: boolean;
+}
+
+export default function AHPExpertChoiceTree(props: AHPExpertChoiceTreeProps) {
+  const { tree, setTree, title, setTitle, onSave, saving, message, readOnly } = props;
 
   // Update bobot sub
   const handleWeightChange = (id: string, value: number) => {
@@ -192,7 +202,7 @@ export default function AHPExpertChoiceTree() {
       }
       return node;
     };
-    setTree(update(tree));
+    setTree?.(update(tree));
   };
 
   // Update nama node
@@ -207,7 +217,7 @@ export default function AHPExpertChoiceTree() {
       }
       return node;
     };
-    setTree(update(tree));
+    setTree?.(update(tree));
   };
 
   // Tambah kategori/sub
@@ -239,7 +249,7 @@ export default function AHPExpertChoiceTree() {
       }
       return node;
     };
-    setTree(add(tree));
+    setTree?.(add(tree));
   };
 
   // Hapus node
@@ -254,7 +264,7 @@ export default function AHPExpertChoiceTree() {
       }
       return node;
     };
-    setTree(remove(tree));
+    setTree?.(remove(tree));
   };
 
   // Hitung total bobot per kategori
@@ -268,17 +278,17 @@ export default function AHPExpertChoiceTree() {
   // Fungsi simpan ke backend
   const handleSave = async () => {
     if (!tree || !title) {
-      setMessage("Isi judul dan buat pohon AHP terlebih dahulu.");
+      // setMessage("Isi judul dan buat pohon AHP terlebih dahulu.");
       return;
     }
-    setSaving(true);
+    // setSaving(true);
     try {
       await ahpTreeService.create(title, tree);
-      setMessage("Berhasil disimpan!");
+      // setMessage("Berhasil disimpan!");
     } catch (err) {
-      setMessage("Gagal menyimpan.");
+      // setMessage("Gagal menyimpan.");
     }
-    setSaving(false);
+    // setSaving(false);
   };
 
   return (
@@ -289,7 +299,7 @@ export default function AHPExpertChoiceTree() {
           type="text"
           placeholder="Judul Goal/Project"
           value={title}
-          onChange={e => setTitle(e.target.value)}
+          onChange={e => setTitle?.(e.target.value)}
           className="border px-2 py-1 rounded mr-2"
           style={{ minWidth: 200 }}
         />
@@ -306,7 +316,7 @@ export default function AHPExpertChoiceTree() {
         {!tree ? (
           <button
             onClick={() =>
-              setTree({
+              setTree?.({
                 id: "goal",
                 type: "goal",
                 name: "Goal: ...",
@@ -339,7 +349,7 @@ export default function AHPExpertChoiceTree() {
         <div className="mt-6">
           <h3 className="font-semibold">Total Bobot per Kategori:</h3>
           <ul>
-            {tree.children?.map(cat =>
+            {tree.children?.map((cat: AHPNode) =>
               cat.type === "category" ? (
                 <li key={cat.id}>
                   {cat.name}: {getCategoryTotals(cat).toFixed(3)}
